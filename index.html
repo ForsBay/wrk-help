@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Часы">
+<meta name="theme-color" content="#0B1220">
+<title>Рабочие часы</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{color-scheme:dark}
+body{background:#0B1220;color:#D8E4F2;font-family:-apple-system,system-ui,'Segoe UI',sans-serif;min-height:100vh;min-height:100dvh;overscroll-behavior:none}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+#app{max-width:430px;margin:0 auto}
+.view{padding-bottom:60px}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;
+  padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-left:20px;padding-right:20px}
+.hdr-sub{font-size:11px;color:#5E7A94;text-transform:uppercase;letter-spacing:.09em}
+.hdr-title{font-size:22px;font-weight:800;margin-top:2px}
+.ibtn{background:#141E30;border:1px solid #1E304A;border-radius:10px;color:#D8E4F2;font-size:21px;
+  width:40px;height:40px;display:flex;align-items:center;justify-content:center}
+.ibtn:disabled{opacity:.25;cursor:default}
+
+/* Month nav */
+.mnav{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 12px}
+.mlbl{font-size:15px;font-weight:700;text-transform:capitalize}
+
+/* Calendar grid */
+.cal{padding:0 12px}
+.dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
+.dow{text-align:center;font-size:10px;font-weight:700;color:#5E7A94;text-transform:uppercase;letter-spacing:.04em;padding:3px 0}
+.dow.wknd{color:#E07A5F}
+.dgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.dc{background:#141E30;border:1.5px solid #1E304A;border-radius:11px;padding:6px 2px 5px;
+  display:flex;flex-direction:column;align-items:center;min-height:62px;gap:0}
+.dc:disabled{opacity:.2;cursor:default}
+.dc.active{background:rgba(90,141,240,.13);border-color:rgba(90,141,240,.45)}
+.dc.today{border-color:#5A8DF0!important}
+.dn{font-size:13px;font-weight:500;color:#D8E4F2;line-height:1}
+.dc.today .dn{color:#5A8DF0;font-weight:800}
+.dc.wknd .dn{color:#E07A5F}
+.dh{font-size:12px;font-weight:700;color:#5A8DF0;line-height:1;margin-top:4px}
+.de{font-size:10px;color:#3DD6AC;line-height:1;margin-top:2px}
+.dp{font-size:18px;color:#2A3A52;line-height:1;margin-top:4px}
+
+/* Summary bar */
+.summ{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;padding:12px 12px 0}
+.sc{background:#141E30;border-radius:15px;padding:13px 8px;border:1px solid #1E304A;text-align:center}
+.sv{font-size:23px;font-weight:800;line-height:1}
+.sv.g{color:#3DD6AC}
+.sl{font-size:10px;color:#5E7A94;text-transform:uppercase;letter-spacing:.07em;margin-top:4px}
+.rbadge{margin:9px 12px 0;background:#141E30;border-radius:11px;padding:8px 14px;
+  border:1px solid #1E304A;text-align:center;color:#5E7A94;font-size:13px}
+
+/* Settings */
+.shdr{display:flex;align-items:center;gap:12px;
+  padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-left:20px;padding-right:20px;padding-bottom:18px}
+.shdr h2{margin:0;font-size:20px;font-weight:700}
+.sbody{padding:0 18px;display:flex;flex-direction:column;gap:13px}
+.scard{background:#141E30;border-radius:17px;padding:18px;border:1px solid #1E304A}
+.clbl{color:#5E7A94;font-size:11px;text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px}
+.rinrow{display:flex;align-items:center;gap:10px}
+.rin{flex:1;background:#0B1220;border:1px solid #1E304A;border-radius:12px;color:#D8E4F2;
+  font-size:26px;font-weight:700;padding:10px 14px;outline:none;width:100%}
+.rsym{color:#5A8DF0;font-size:21px;font-weight:700}
+.curlist{display:flex;flex-direction:column;gap:7px}
+.copt{background:#0B1220;border:1.5px solid #1E304A;border-radius:11px;color:#D8E4F2;
+  font-size:15px;padding:12px 15px;display:flex;justify-content:space-between;align-items:center}
+.copt.sel{background:rgba(90,141,240,.15);border-color:#5A8DF0;color:#5A8DF0;font-weight:700}
+.svbtn{background:#5A8DF0;border:none;border-radius:13px;color:#fff;
+  font-size:17px;font-weight:700;padding:15px;width:100%}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);
+  display:flex;align-items:flex-end;justify-content:center;z-index:100}
+.sheet{background:#1A2742;border-radius:24px 24px 0 0;
+  padding:16px 20px calc(env(safe-area-inset-bottom,0px) + 44px);
+  width:100%;max-width:430px;
+  border-top:1px solid #1E304A;border-left:1px solid #1E304A;border-right:1px solid #1E304A}
+.drag{width:34px;height:4px;background:#2A3A52;border-radius:2px;margin:0 auto 18px}
+.mdate{text-align:center;color:#5E7A94;font-size:13px;text-transform:capitalize}
+.mtitle{text-align:center;font-size:18px;font-weight:700;margin-top:4px;margin-bottom:16px}
+
+/* Mode toggle */
+.mtoggle{display:flex;background:#0B1220;border-radius:11px;padding:3px;margin-bottom:14px;gap:3px}
+.mbtn{flex:1;background:none;border:none;border-radius:9px;color:#5E7A94;
+  font-size:14px;font-weight:600;padding:9px;transition:.15s}
+.mbtn.on{background:#141E30;color:#D8E4F2}
+
+/* Hours mode */
+.hinrow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.hin{flex:1;background:#0B1220;border:2px solid #5A8DF0;border-radius:15px;color:#D8E4F2;
+  font-size:40px;font-weight:800;padding:11px 16px;outline:none;text-align:center}
+.hlbl{font-size:19px;color:#5E7A94;font-weight:600;flex-shrink:0}
+.presets{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+.pre{background:#0B1220;border:1px solid #1E304A;border-radius:10px;
+  color:#D8E4F2;font-size:16px;font-weight:600;padding:11px 0}
+.pre.on{background:#5A8DF0;border-color:#5A8DF0;color:#fff}
+
+/* Range mode */
+.rrow{display:flex;align-items:flex-end;gap:10px;margin-bottom:12px}
+.rfield{flex:1;display:flex;flex-direction:column;gap:5px}
+.rlbl{font-size:11px;color:#5E7A94;text-align:center;text-transform:uppercase;letter-spacing:.08em}
+.tmin{background:#0B1220;border:2px solid #5A8DF0;border-radius:13px;color:#D8E4F2;
+  font-size:22px;font-weight:700;padding:11px 8px;outline:none;text-align:center;
+  width:100%;color-scheme:dark}
+.rdash{font-size:22px;color:#5E7A94;padding-bottom:11px;flex-shrink:0}
+
+/* Preview & actions */
+.prev{text-align:center;color:#3DD6AC;font-size:16px;font-weight:600;margin-bottom:12px}
+.mactions{display:grid;grid-template-columns:1fr 2fr;gap:9px}
+.clrbtn{background:#0B1220;border:1px solid #1E304A;border-radius:13px;
+  color:#5E7A94;font-size:15px;font-weight:600;padding:14px}
+.savbtn{background:#5A8DF0;border:none;border-radius:13px;color:#fff;
+  font-size:16px;font-weight:700;padding:14px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const CUR = {
+  PLN:{s:'zł',l:'Злотый'},
+  RUB:{s:'₽', l:'Рубль'},
+  USD:{s:'$', l:'Доллар'},
+  EUR:{s:'€', l:'Евро'},
+  GBP:{s:'£', l:'Фунт'},
+};
+const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const SK = 'wh_v2';
+
+// ── State ──────────────────────────────────────────────────────────────────
+let S = {
+  view:  'main',
+  cfg:   { rate:25, cur:'PLN' },
+  mo:    moKey(),
+  data:  {},      // { 'YYYY-MM': { day: hours } }
+  modal: null,    // { day, mode:'h'|'r', h, from, to }
+  dcfg:  null,
+};
+
+// ── Persistence ────────────────────────────────────────────────────────────
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SK) || '{}');
+    if (d.cfg)  S.cfg  = d.cfg;
+    if (d.data) S.data = d.data;
+  } catch(e) {}
+}
+function save() {
+  try { localStorage.setItem(SK, JSON.stringify({cfg:S.cfg, data:S.data})); }
+  catch(e) {}
+}
+
+// ── Date helpers ───────────────────────────────────────────────────────────
+function p2(n) { return String(n).padStart(2,'0'); }
+function moKey(d = new Date()) { return `${d.getFullYear()}-${p2(d.getMonth()+1)}`; }
+function moShift(k,d) { const [y,m]=k.split('-').map(Number); return moKey(new Date(y,m-1+d,1)); }
+function moLabel(k) {
+  const [y,m]=k.split('-');
+  return new Date(+y,+m-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+}
+function daysIn(k)   { const [y,m]=k.split('-').map(Number); return new Date(y,m,0).getDate(); }
+function firstDow(k) { const [y,m]=k.split('-').map(Number); return (new Date(y,m-1,1).getDay()+6)%7; }
+function isToday(k,d) {
+  const t=new Date(), [y,m]=k.split('-').map(Number);
+  return t.getFullYear()===y && t.getMonth()+1===m && t.getDate()===d;
+}
+function isWknd(k,d)   { const [y,m]=k.split('-').map(Number); const dw=new Date(y,m-1,d).getDay(); return dw===0||dw===6; }
+function isFuture(k,d) {
+  const [y,m]=k.split('-').map(Number);
+  const t=new Date();
+  return new Date(y,m-1,d) > new Date(t.getFullYear(),t.getMonth(),t.getDate());
+}
+function fullDate(k,d) {
+  const [y,m]=k.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+}
+function calcRange(a,b) {
+  if (!a||!b) return 0;
+  const [ah,am]=a.split(':').map(Number), [bh,bm]=b.split(':').map(Number);
+  let min = (bh*60+bm)-(ah*60+am);
+  if (min < 0) min += 1440;        // overnight shift
+  return Math.round(min/60*100)/100;
+}
+
+// ── Entries ────────────────────────────────────────────────────────────────
+function ents() { return S.data[S.mo] || {}; }
+function setEnt(d,h) { if (!S.data[S.mo]) S.data[S.mo]={}; S.data[S.mo][d]=h; save(); }
+function delEnt(d)   { if (S.data[S.mo]) delete S.data[S.mo][d]; save(); }
+
+// ── Render helpers ─────────────────────────────────────────────────────────
+function fmt(n) { return n%1===0 ? n : n.toFixed(1); }
+function fmtEarned(e) { return e>=10000 ? `${(e/1000).toFixed(1)}к` : Math.round(e); }
+function fmtCell(e,sym) { return e>=1000 ? `${(e/1000).toFixed(1)}k` : Math.round(e); }
+
+// ── Main view ──────────────────────────────────────────────────────────────
+function rMain() {
+  const e=ents(), sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const dc=daysIn(S.mo), fd=firstDow(S.mo), isCur=S.mo===moKey();
+
+  const cells=[];
+  for (let i=0;i<fd;i++) cells.push(0);
+  for (let d=1;d<=dc;d++) cells.push(d);
+  while (cells.length%7) cells.push(0);
+
+  const dow = DOW.map((d,i)=>`<div class="dow ${i>=5?'wknd':''}">${d}</div>`).join('');
+  const grid = cells.map(d => {
+    if (!d) return '<div></div>';
+    const h=e[d], has=h!==undefined;
+    const today=isToday(S.mo,d), fut=isFuture(S.mo,d), wk=isWknd(S.mo,d);
+    const earned = has ? h*S.cfg.rate : 0;
+    return `<button class="dc${has?' active':''}${today?' today':''}${wk?' wknd':''}"
+      onclick="openDay(${d})"${fut?' disabled':''}>
+      <span class="dn">${d}</span>
+      ${has
+        ? `<span class="dh">${h}h</span><span class="de">${fmtCell(earned,sym)}${sym}</span>`
+        : (!fut ? '<span class="dp">+</span>' : '')}
+    </button>`;
+  }).join('');
+
+  const th=Object.values(e).reduce((a,h)=>a+h,0);
+  const te=th*S.cfg.rate;
+  const wd=Object.keys(e).length;
+
+  return `<div class="view">
+    <div class="hdr">
+      <div><div class="hdr-sub">Учёт часов</div><div class="hdr-title">Рабочие дни</div></div>
+      <button class="ibtn" onclick="openCfg()">⚙</button>
+    </div>
+    <div class="mnav">
+      <button class="ibtn" onclick="goMo(-1)">‹</button>
+      <span class="mlbl">${moLabel(S.mo)}</span>
+      <button class="ibtn" onclick="goMo(1)"${isCur?' disabled':''}>›</button>
+    </div>
+    <div class="cal">
+      <div class="dow-row">${dow}</div>
+      <div class="dgrid">${grid}</div>
+    </div>
+    <div class="summ">
+      <div class="sc"><div class="sv">${wd}</div><div class="sl">Дней</div></div>
+      <div class="sc"><div class="sv">${fmt(th)}</div><div class="sl">Часов</div></div>
+      <div class="sc"><div class="sv g">${fmtEarned(te)}</div><div class="sl">${sym}</div></div>
+    </div>
+    <div class="rbadge">${S.cfg.rate} ${sym}/час</div>
+  </div>`;
+}
+
+// ── Settings view ──────────────────────────────────────────────────────────
+function rSettings() {
+  const d=S.dcfg, sym=CUR[d.cur]?.s||d.cur;
+  const clist=Object.entries(CUR).map(([c,i])=>`
+    <button class="copt${d.cur===c?' sel':''}" onclick="selCur('${c}')">
+      <span>${i.l}</span><span>${i.s} ${c}</span>
+    </button>`).join('');
+  return `<div class="view">
+    <div class="shdr"><button class="ibtn" onclick="closeCfg()">←</button><h2>Настройки</h2></div>
+    <div class="sbody">
+      <div class="scard">
+        <div class="clbl">Ставка в час</div>
+        <div class="rinrow">
+          <input type="number" id="rin" class="rin" value="${d.rate}" oninput="dRate(this.value)">
+          <span class="rsym">${sym}</span>
+        </div>
+      </div>
+      <div class="scard">
+        <div class="clbl">Валюта</div>
+        <div class="curlist">${clist}</div>
+      </div>
+      <button class="svbtn" onclick="saveCfg()">Сохранить</button>
+    </div>
+  </div>`;
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function rModal() {
+  const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const isH=m.mode==='h';
+  const ph = isH ? (parseFloat(m.h)||0) : calcRange(m.from, m.to);
+  const pe = ph * S.cfg.rate;
+  const prev = ph>0 ? `<div class="prev">${ph}ч = ${pe.toFixed(0)} ${sym}</div>` : '';
+  const psets = [4,5,6,7,8].map(h=>
+    `<button class="pre${m.h===String(h)?' on':''}" onclick="setP(${h})">${h}</button>`).join('');
+
+  return `<div class="overlay" onclick="ovClick(event)">
+    <div class="sheet">
+      <div class="drag"></div>
+      <div class="mdate">${fullDate(S.mo, m.day)}</div>
+      <div class="mtitle">Сколько часов отработано?</div>
+      <div class="mtoggle">
+        <button class="mbtn${isH?' on':''}" onclick="setMode('h')">Вручную</button>
+        <button class="mbtn${!isH?' on':''}" onclick="setMode('r')">По времени</button>
+      </div>
+      ${isH ? `
+        <div class="hinrow">
+          <input type="number" id="hin" class="hin" value="${m.h}" placeholder="0"
+            min="0" max="24" step="0.5" oninput="setH(this.value)">
+          <span class="hlbl">ч</span>
+        </div>
+        <div class="presets">${psets}</div>
+      ` : `
+        <div class="rrow">
+          <div class="rfield">
+            <div class="rlbl">С</div>
+            <input type="time" id="tfrom" class="tmin" value="${m.from}" oninput="setFrom(this.value)">
+          </div>
+          <div class="rdash">—</div>
+          <div class="rfield">
+            <div class="rlbl">До</div>
+            <input type="time" id="tto" class="tmin" value="${m.to}" oninput="setTo(this.value)">
+          </div>
+        </div>
+      `}
+      ${prev}
+      <div class="mactions">
+        <button class="clrbtn" onclick="clearDay()">Очистить</button>
+        <button class="savbtn" onclick="saveDay()">Сохранить</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Full render ────────────────────────────────────────────────────────────
+function render() {
+  let html = S.view==='settings' ? rSettings() : rMain();
+  if (S.modal) html += rModal();
+  document.getElementById('app').innerHTML = html;
+  if (S.modal) {
+    const inp = document.getElementById(S.modal.mode==='h' ? 'hin' : 'tfrom');
+    if (inp) { inp.focus(); if (S.modal.mode==='h') inp.select(); }
+  }
+}
+
+// ── Live preview (no re-render) ────────────────────────────────────────────
+function updPrev() {
+  const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const ph = m.mode==='h' ? (parseFloat(m.h)||0) : calcRange(m.from, m.to);
+  const pe = ph * S.cfg.rate;
+  let el = document.querySelector('.prev');
+  if (ph > 0) {
+    if (!el) { el=document.createElement('div'); el.className='prev'; document.querySelector('.mactions').before(el); }
+    el.textContent = `${ph}ч = ${pe.toFixed(0)} ${sym}`;
+  } else if (el) el.remove();
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────
+function goMo(d)      { S.mo=moShift(S.mo,d); render(); }
+function openDay(d)   {
+  if (isFuture(S.mo,d)) return;
+  const ex=ents()[d];
+  S.modal={day:d, mode:'h', h:ex!==undefined?String(ex):'', from:'09:00', to:'17:00'};
+  render();
+}
+function ovClick(e)   { if (e.target.classList.contains('overlay')) { S.modal=null; render(); } }
+function openCfg()    { S.dcfg={...S.cfg}; S.view='settings'; render(); }
+function closeCfg()   { S.view='main'; render(); }
+function saveCfg()    { S.cfg={...S.dcfg}; save(); S.view='main'; render(); }
+function dRate(v)     { S.dcfg.rate=parseFloat(v)||0; }
+function selCur(c)    { S.dcfg.cur=c; render(); const r=document.getElementById('rin'); if(r)r.value=S.dcfg.rate; }
+function setMode(m)   { S.modal.mode=m; render(); }
+function setH(v)      { S.modal.h=v; updPrev(); }
+function setFrom(v)   { S.modal.from=v; updPrev(); }
+function setTo(v)     { S.modal.to=v; updPrev(); }
+function setP(h)      {
+  S.modal.h=String(h);
+  const i=document.getElementById('hin'); if(i)i.value=h;
+  document.querySelectorAll('.pre').forEach(b=>b.classList.toggle('on',+b.textContent===h));
+  updPrev();
+}
+function clearDay()   { delEnt(S.modal.day); S.modal=null; render(); }
+function saveDay()    {
+  const m=S.modal;
+  const h = m.mode==='h' ? (parseFloat(m.h)||0) : calcRange(m.from, m.to);
+  if (h>0) setEnt(m.day, Math.min(Math.round(h*100)/100, 24));
+  else delEnt(m.day);
+  S.modal=null; render();
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+load();
+render();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js');
+  });
+}
+</script>
+</body>
+</html>
