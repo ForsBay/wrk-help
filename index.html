@@ -194,8 +194,16 @@ const auth = getAuth(app);
 
 window.auth = auth;
 window.googleProvider = new GoogleAuthProvider();
-window.signInGoogle = () => {
-  alert("работает");
+window.signInGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, window.googleProvider);
+    alert("вход выполнен");
+    console.log(result);
+  } catch (e) {
+    alert("Ошибка: " + e.code);
+    console.error(e);
+  }
+};
 
 };
 
