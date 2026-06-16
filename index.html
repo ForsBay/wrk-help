@@ -200,7 +200,9 @@ window.signInGoogle = async () => {
     alert("вход выполнен");
     console.log(result);
   } catch (e) {
-    alert("Ошибка: " + e.code);
+    alert("Ошибка: " + e.code
+       "\nСообщение: " + e.message
+      );
     console.error(e);
   }
 };
