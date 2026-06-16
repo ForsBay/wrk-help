@@ -194,8 +194,10 @@ const auth = getAuth(app);
 
 window.auth = auth;
 window.googleProvider = new GoogleAuthProvider();
-window.signInGoogle = () =>
-  signInWithRedirect(auth, window.googleProvider);
+window.signInGoogle = () => {
+  alert("работает");
+
+};
 
 window.signOutGoogle = () =>
   signOut(auth);
