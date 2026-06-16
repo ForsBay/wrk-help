@@ -196,7 +196,7 @@ window.auth = auth;
 window.googleProvider = new GoogleAuthProvider();
 window.signInGoogle = async () => {
   try {
-    const result = await signInWithRedirect(auth, window.googleProvider);
+    const result = await signInWithPopup(auth, window.googleProvider);
     alert("вход выполнен");
     console.log(result);
   } catch (e) {
