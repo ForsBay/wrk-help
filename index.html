@@ -211,6 +211,20 @@ window.signOutGoogle = () =>
 
 onAuthStateChanged(auth, user => {
   console.log("USER:", user);
+  if (user) {
+
+    alert(
+
+      "Вошел как: " +
+
+      user.displayName +
+
+      "\n" +
+
+      user.email
+
+    );
+    }
 });
 </script>
 <script>
