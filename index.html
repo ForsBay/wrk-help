@@ -195,7 +195,9 @@ const auth = getAuth(app);
 window.auth = auth;
 window.googleProvider = new GoogleAuthProvider();
 window.signInGoogle = async () => {
+  alert("кнопка нажата");
   try {
+  
     const result = await signInWithPopup(auth, window.googleProvider);
     alert("вход выполнен");
     console.log(result);
