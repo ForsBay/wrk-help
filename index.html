@@ -174,7 +174,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebas
 import {
   getAuth,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
@@ -195,7 +195,7 @@ const auth = getAuth(app);
 window.auth = auth;
 window.googleProvider = new GoogleAuthProvider();
 window.signInGoogle = () =>
-  signInWithPopup(auth, window.googleProvider);
+  signInWithRedirect(auth, window.googleProvider);
 
 window.signOutGoogle = () =>
   signOut(auth);
