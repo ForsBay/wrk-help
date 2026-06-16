@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Часы">
+<meta name="apple-mobile-web-app-title" content="Hours">
 <meta name="theme-color" content="#0B1220">
-<title>Рабочие часы</title>
+<title>Work Hours</title>
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.PNG">
 <meta name="mobile-web-app-capable" content="yes">
@@ -69,7 +69,7 @@ input{font-family:inherit}
 .dh{font-size:12px;font-weight:700;color:#5A8DF0;line-height:1;margin-top:4px}
 .de{font-size:10px;color:#3DD6AC;line-height:1;margin-top:2px}
 .dp{font-size:18px;color:#2A3A52;line-height:1;margin-top:4px}
-/* "план" badge on future planned cells */
+/* "plan" badge on future planned cells */
 .dplan{font-size:8px;color:#F5A623;font-weight:700;letter-spacing:.03em;margin-top:1px}
 
 /* ── Summary bar ── */
@@ -165,6 +165,27 @@ input{font-family:inherit}
 .savbtn{background:#5A8DF0;border:none;border-radius:13px;color:#fff;
   font-size:16px;font-weight:700;padding:14px}
 .savbtn.plan{background:#F5A623}
+
+/* ── Profile ── */
+.av{width:40px;height:40px;border-radius:50%;object-fit:cover;display:block}
+.ibtn.av-btn{padding:0;overflow:hidden}
+.prof{display:flex;flex-direction:column;align-items:center;text-align:center}
+.prof-av{width:74px;height:74px;border-radius:50%;object-fit:cover;border:2px solid #1E304A;background:#0B1220}
+.prof-name{font-size:18px;font-weight:800;margin-top:10px}
+.prof-mail{font-size:13px;color:#5E7A94;margin-top:2px}
+.sync-row{display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:12px;color:#5E7A94;margin-top:9px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#3DD6AC;flex-shrink:0}
+.sync-dot.off{background:#5E7A94}
+.sync-dot.busy{background:#F5A623}
+.seg{display:flex;background:#0B1220;border-radius:11px;padding:3px;gap:3px;margin-top:18px}
+.seg button{flex:1;background:none;border:none;border-radius:9px;color:#5E7A94;
+  font-size:14px;font-weight:700;padding:10px;transition:.15s}
+.seg button.on{background:#141E30;color:#D8E4F2}
+.signout{background:rgba(224,122,95,.12);border:1px solid rgba(224,122,95,.35);
+  border-radius:13px;color:#E07A5F;font-size:16px;font-weight:700;padding:14px;width:100%;margin-top:16px}
+.signin{background:#5A8DF0;border:none;border-radius:13px;color:#fff;font-size:16px;
+  font-weight:700;padding:15px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px}
 </style>
 </head>
 <body>
@@ -175,9 +196,19 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBSw70eKBDUDYZkMGvF961sjoMFHwWd-KM",
@@ -189,82 +220,235 @@ const firebaseConfig = {
   measurementId: "G-0P46Q6EYTJ"
 };
 
-const app = initializeApp(firebaseConfig);
+const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db   = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
-window.auth = auth;
-window.googleProvider = new GoogleAuthProvider();
-window.signInGoogle = async () => {
-  alert("кнопка нажата");
+let currentUser = null;   // raw Firebase user
+let unsub       = null;   // Firestore snapshot unsubscribe
+let pushTimer   = null;   // debounce timer for cloud writes
+
+// ── Sign in (popup, with redirect fallback for installed PWAs) ──────────────
+async function signIn() {
   try {
-  
-    const result = await signInWithPopup(auth, window.googleProvider);
-    alert("вход выполнен");
-    console.log(result);
+    await signInWithPopup(auth, provider);
   } catch (e) {
-  alert("Ошибка: " + e.code + "\nСообщение: " + e.message);
-  console.error(e);
-}
-};
-
-
-window.signOutGoogle = () =>
-  signOut(auth);
-
-onAuthStateChanged(auth, user => {
-  console.log("USER:", user);
-  if (user) {
-
-    alert(
-
-      "Вошел как: " +
-
-      user.displayName +
-
-      "\n" +
-
-      user.email
-
-    );
+    const fallback = [
+      'auth/popup-blocked',
+      'auth/operation-not-supported-in-this-environment',
+      'auth/cancelled-popup-request'
+    ];
+    if (fallback.includes(e.code)) {
+      try { await signInWithRedirect(auth, provider); } catch (_) {}
+    } else if (e.code !== 'auth/popup-closed-by-user') {
+      console.error('Sign-in error:', e);
     }
+  }
+}
+
+function signOutUser() {
+  if (unsub) { unsub(); unsub = null; }
+  return signOut(auth);
+}
+
+// ── Push local state to the cloud (debounced) ───────────────────────────────
+function push(state) {
+  if (!currentUser) return;
+  window.__app.setSync('busy');
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    try {
+      await setDoc(
+        doc(db, 'users', currentUser.uid),
+        { cfg: state.cfg, data: state.data, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+      window.__app.setSync('idle');
+    } catch (e) {
+      console.error('Cloud write failed:', e);
+      window.__app.setSync('off');
+    }
+  }, 600);
+}
+
+window.__fb = { signIn, signOut: signOutUser, push };
+
+// Complete any pending redirect sign-in (PWA / mobile)
+getRedirectResult(auth).catch(e => console.error('Redirect result:', e));
+
+// ── React to auth changes ───────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (unsub) { unsub(); unsub = null; }
+
+  if (!user) {
+    currentUser = null;
+    window.__app.setUser(null);
+    return;
+  }
+
+  currentUser = user;
+  window.__app.setUser({
+    uid:   user.uid,
+    name:  user.displayName,
+    email: user.email,
+    photo: user.photoURL
+  });
+  window.__app.setSync('busy');
+
+  const ref = doc(db, 'users', user.uid);
+  try {
+    // 1. Pull cloud doc and merge it with whatever is already local
+    const snap   = await getDoc(ref);
+    const merged = window.__app.mergeRemote(snap.exists() ? snap.data() : null);
+
+    // 2. Write the merged result back so the cloud is complete
+    await setDoc(
+      ref,
+      { cfg: merged.cfg, data: merged.data, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+    window.__app.setSync('idle');
+
+    // 3. Listen for changes made on other devices (ignore our own writes)
+    unsub = onSnapshot(ref, s => {
+      if (s.metadata.hasPendingWrites) return;
+      if (s.exists()) window.__app.mergeRemote(s.data());
+    }, err => {
+      console.error('Snapshot error:', err);
+      window.__app.setSync('off');
+    });
+  } catch (e) {
+    console.error('Initial sync failed:', e);
+    window.__app.setSync('off');
+  }
 });
 </script>
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
 const CUR = {
-  PLN:{s:'zł',l:'Злотый'},
-  RUB:{s:'₽', l:'Рубль'},
-  USD:{s:'$', l:'Доллар'},
-  EUR:{s:'€', l:'Евро'},
-  GBP:{s:'£', l:'Фунт'},
+  PLN:{s:'zł'},
+  RUB:{s:'₽'},
+  USD:{s:'$'},
+  EUR:{s:'€'},
+  GBP:{s:'£'},
 };
-const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-const SK  = 'wh_v2';
+
+// ── i18n ───────────────────────────────────────────────────────────────────
+const LANGS = ['en','ru','pl'];
+const LANGNAME = { en:'English', ru:'Русский', pl:'Polski' };
+const LOCALE   = { en:'en-US', ru:'ru-RU', pl:'pl-PL' };
+
+const I18N = {
+  en: {
+    sub:'Time tracking', work:'Working days', stats:'Statistics', settings:'Settings',
+    rate:'Hourly rate', currency:'Currency', language:'Language', save:'Save',
+    days:'Days', hours:'Hours', perHour:'/hr', earnings:'Earnings', month:'Month', total:'Total',
+    planning:'Planning', planHours:'Plan hours', hoursWorked:'How many hours worked?',
+    manual:'Manual', byTime:'By time', hShort:'h', from:'From', to:'To',
+    clear:'Clear', plan:'Plan', planBadge:'plan',
+    profile:'Profile', signIn:'Sign in with Google', signOut:'Sign out',
+    notSignedIn:'Not signed in', synced:'Synced', syncing:'Syncing…', syncOff:'Offline',
+    yearSuffix:'',
+    dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    cur:{PLN:'Polish Zloty',RUB:'Russian Ruble',USD:'US Dollar',EUR:'Euro',GBP:'British Pound'}
+  },
+  ru: {
+    sub:'Учёт часов', work:'Рабочие дни', stats:'Статистика', settings:'Настройки',
+    rate:'Ставка в час', currency:'Валюта', language:'Язык', save:'Сохранить',
+    days:'Дней', hours:'Часов', perHour:'/час', earnings:'Заработок', month:'Месяц', total:'Итого',
+    planning:'Планирование', planHours:'Запланировать часы', hoursWorked:'Сколько часов отработано?',
+    manual:'Вручную', byTime:'По времени', hShort:'ч', from:'С', to:'До',
+    clear:'Очистить', plan:'Запланировать', planBadge:'план',
+    profile:'Профиль', signIn:'Войти через Google', signOut:'Выйти',
+    notSignedIn:'Вход не выполнен', synced:'Синхронизировано', syncing:'Синхронизация…', syncOff:'Не в сети',
+    yearSuffix:' год',
+    dow:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
+    cur:{PLN:'Злотый',RUB:'Рубль',USD:'Доллар',EUR:'Евро',GBP:'Фунт'}
+  },
+  pl: {
+    sub:'Śledzenie czasu', work:'Dni robocze', stats:'Statystyki', settings:'Ustawienia',
+    rate:'Stawka godzinowa', currency:'Waluta', language:'Język', save:'Zapisz',
+    days:'Dni', hours:'Godziny', perHour:'/godz', earnings:'Zarobek', month:'Miesiąc', total:'Razem',
+    planning:'Planowanie', planHours:'Zaplanuj godziny', hoursWorked:'Ile godzin przepracowano?',
+    manual:'Ręcznie', byTime:'Wg czasu', hShort:'h', from:'Od', to:'Do',
+    clear:'Wyczyść', plan:'Zaplanuj', planBadge:'plan',
+    profile:'Profil', signIn:'Zaloguj przez Google', signOut:'Wyloguj się',
+    notSignedIn:'Nie zalogowano', synced:'Zsynchronizowano', syncing:'Synchronizacja…', syncOff:'Offline',
+    yearSuffix:' rok',
+    dow:['Pon','Wt','Śr','Czw','Pt','Sob','Nd'],
+    cur:{PLN:'Złoty',RUB:'Rubel',USD:'Dolar',EUR:'Euro',GBP:'Funt'}
+  }
+};
+function L()    { return I18N[S.cfg.lang] || I18N.en; }
+function t(k)   { return L()[k]; }
+function loc()  { return LOCALE[S.cfg.lang] || 'en-US'; }
+function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g,
+  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+const SK = 'wh_v2';
 
 // ── State ──────────────────────────────────────────────────────────────────
 let S = {
   view:    'main',   // main | settings | stats
-  cfg:     { rate:25, cur:'PLN' },
+  cfg:     { rate:25, cur:'PLN', lang:'en' },
   mo:      moKey(),
   data:    {},       // { 'YYYY-MM': { day: hours } }
   modal:   null,
   dcfg:    null,
   yearKey: new Date().getFullYear(),
   sMode:   'hours',  // stats chart toggle: hours | earnings
+  user:    null,     // { uid, name, email, photo }
+  profile: false,    // profile sheet open?
+  sync:    'off',    // off | idle | busy
 };
+let applyingRemote = false; // guard so cloud-applied changes don't bounce back
 
 // ── Persistence ────────────────────────────────────────────────────────────
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(SK) || '{}');
-    if (d.cfg)  S.cfg  = d.cfg;
+    if (d.cfg)  S.cfg  = { ...S.cfg, ...d.cfg };
     if (d.data) S.data = d.data;
   } catch(e) {}
 }
 function save() {
   try { localStorage.setItem(SK, JSON.stringify({cfg:S.cfg, data:S.data})); }
   catch(e) {}
+  if (!applyingRemote && window.__fb && S.user) {
+    window.__fb.push({ cfg:S.cfg, data:S.data });
+  }
 }
+
+// ── Cloud bridge (called from the Firebase module) ──────────────────────────
+window.__app = {
+  setUser(u) {
+    S.user = u;
+    if (!u) { S.sync = 'off'; S.profile = false; }
+    render();
+  },
+  setSync(s) {
+    S.sync = s;
+    if (S.profile) render();   // only the profile sheet shows sync state
+  },
+  getState() { return { cfg:S.cfg, data:S.data }; },
+  // Union-merge remote data into local. Cloud value wins on a conflicting day.
+  mergeRemote(remote) {
+    if (remote) {
+      applyingRemote = true;
+      if (remote.cfg)  S.cfg = { ...S.cfg, ...remote.cfg };
+      if (remote.data) {
+        for (const mk in remote.data) {
+          S.data[mk] = { ...(S.data[mk]||{}), ...remote.data[mk] };
+        }
+      }
+      save();
+      applyingRemote = false;
+      render();
+    }
+    return { cfg:S.cfg, data:S.data };
+  }
+};
 
 // ── Date helpers ───────────────────────────────────────────────────────────
 function p2(n) { return String(n).padStart(2,'0'); }
@@ -272,7 +456,7 @@ function moKey(d=new Date()) { return `${d.getFullYear()}-${p2(d.getMonth()+1)}`
 function moShift(k,d) { const[y,m]=k.split('-').map(Number); return moKey(new Date(y,m-1+d,1)); }
 function moLabel(k) {
   const[y,m]=k.split('-');
-  return new Date(+y,+m-1,1).toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+  return new Date(+y,+m-1,1).toLocaleDateString(loc(),{month:'long',year:'numeric'});
 }
 function daysIn(k)    { const[y,m]=k.split('-').map(Number); return new Date(y,m,0).getDate(); }
 function firstDow(k)  { const[y,m]=k.split('-').map(Number); return(new Date(y,m-1,1).getDay()+6)%7; }
@@ -288,7 +472,7 @@ function isFuture(k,d) {
 }
 function fullDate(k,d) {
   const[y,m]=k.split('-').map(Number);
-  return new Date(y,m-1,d).toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+  return new Date(y,m-1,d).toLocaleDateString(loc(),{weekday:'long',day:'numeric',month:'long'});
 }
 function calcRange(a,b) {
   if(!a||!b) return 0;
@@ -304,7 +488,7 @@ function delEnt(d)     { if(S.data[S.mo])delete S.data[S.mo][d]; save(); }
 
 // ── Format helpers ─────────────────────────────────────────────────────────
 function fmt(n)        { return n%1===0?n:n.toFixed(1); }
-function fmtBig(e)     { return e>=10000?`${(e/1000).toFixed(1)}к`:Math.round(e); }
+function fmtBig(e)     { return e>=10000?`${(e/1000).toFixed(1)}k`:Math.round(e); }
 function fmtCell(e)    { return e>=1000?`${(e/1000).toFixed(1)}k`:Math.round(e); }
 
 // ── MAIN VIEW ──────────────────────────────────────────────────────────────
@@ -317,7 +501,8 @@ function rMain() {
   for(let d=1;d<=dc;d++) cells.push(d);
   while(cells.length%7) cells.push(0);
 
-  const dow = DOW.map((d,i)=>`<div class="dow${i>=5?' wknd':''}">${d}</div>`).join('');
+  const dow = L().dow.map((d,i)=>`<div class="dow${i>=5?' wknd':''}">${d}</div>`).join('');
+  const hs = L().hShort;
 
   const grid = cells.map(d=>{
     if(!d) return '<div></div>';
@@ -328,9 +513,9 @@ function rMain() {
       onclick="openDay(${d})">
       <span class="dn">${d}</span>
       ${has
-        ? `<span class="dh">${h}h</span>
+        ? `<span class="dh">${h}${hs}</span>
            <span class="de">${fmtCell(earned)}${sym}</span>
-           ${fut?'<span class="dplan">план</span>':''}`
+           ${fut?`<span class="dplan">${t('planBadge')}</span>`:''}`
         : '<span class="dp">+</span>'}
     </button>`;
   }).join('');
@@ -339,13 +524,17 @@ function rMain() {
   const te=th*S.cfg.rate;
   const wd=Object.keys(e).length;
 
+  const profBtn = (S.user && S.user.photo)
+    ? `<button class="ibtn av-btn" title="${t('profile')}" onclick="openProfile()"><img class="av" src="${esc(S.user.photo)}" referrerpolicy="no-referrer" alt=""></button>`
+    : `<button class="ibtn" title="${t('profile')}" onclick="openProfile()">👤</button>`;
+
   return `<div class="view">
     <div class="hdr">
-      <div><div class="hdr-sub">Учёт часов</div><div class="hdr-title">Рабочие дни</div></div>
+      <div><div class="hdr-sub">${t('sub')}</div><div class="hdr-title">${t('work')}</div></div>
      <div class="hdr-right">
-  <button class="ibtn" onclick="signInGoogle()">👤</button>
-  <button class="ibtn" title="Статистика" onclick="openStats()">📊</button>
-  <button class="ibtn" title="Настройки" onclick="openCfg()">⚙</button>
+  ${profBtn}
+  <button class="ibtn" title="${t('stats')}" onclick="openStats()">📊</button>
+  <button class="ibtn" title="${t('settings')}" onclick="openCfg()">⚙</button>
       </div>
     </div>
     <div class="mnav">
@@ -358,11 +547,11 @@ function rMain() {
       <div class="dgrid">${grid}</div>
     </div>
     <div class="summ">
-      <div class="sc"><div class="sv">${wd}</div><div class="sl">Дней</div></div>
-      <div class="sc"><div class="sv">${fmt(th)}</div><div class="sl">Часов</div></div>
+      <div class="sc"><div class="sv">${wd}</div><div class="sl">${t('days')}</div></div>
+      <div class="sc"><div class="sv">${fmt(th)}</div><div class="sl">${t('hours')}</div></div>
       <div class="sc"><div class="sv g">${fmtBig(te)}</div><div class="sl">${sym}</div></div>
     </div>
-    <div class="rbadge">${S.cfg.rate} ${sym}/час</div>
+    <div class="rbadge">${S.cfg.rate} ${sym}${t('perHour')}</div>
   </div>`;
 }
 
@@ -396,7 +585,7 @@ function rStats() {
     const isCur=d.mk===moKey();
     const col=v>0?(isCur?'#3DD6AC':'#5A8DF0'):'#1E304A';
     const mName=new Date(+d.mk.split('-')[0],+d.mk.split('-')[1]-1,1)
-      .toLocaleDateString('ru-RU',{month:'short'}).replace('.','');
+      .toLocaleDateString(loc(),{month:'short'}).replace('.','');
     const lbl=v>0?(S.sMode==='hours'?v.toFixed(0):(v>=1000?`${(v/1000).toFixed(0)}k`:Math.round(v))):'';
     return `<g onclick="barClick(${i})" style="cursor:pointer">
       <rect x="${x}" y="${y}" width="${w}" height="${bh}" fill="${col}" rx="3"/>
@@ -409,7 +598,7 @@ function rStats() {
   // ── Table rows ──
   const rows=yd.map(d=>{
     const mn=new Date(+d.mk.split('-')[0],+d.mk.split('-')[1]-1,1)
-      .toLocaleDateString('ru-RU',{month:'long'});
+      .toLocaleDateString(loc(),{month:'long'});
     const isCur=d.mk===moKey();
     const isEmpty=d.hours===0&&d.days===0;
     return `<tr style="opacity:${isEmpty?.35:1}" onclick="jumpToMonth('${d.mk}')">
@@ -424,34 +613,34 @@ function rStats() {
     <div class="hdr">
       <button class="ibtn" onclick="S.view='main';render()">←</button>
       <div style="text-align:center">
-        <div class="hdr-sub">Учёт часов</div>
-        <div class="hdr-title">Статистика</div>
+        <div class="hdr-sub">${t('sub')}</div>
+        <div class="hdr-title">${t('stats')}</div>
       </div>
       <div style="width:40px"></div>
     </div>
     <div class="mnav">
       <button class="ibtn" onclick="goYear(-1)">‹</button>
-      <span class="mlbl">${S.yearKey} год</span>
+      <span class="mlbl">${S.yearKey}${t('yearSuffix')}</span>
       <button class="ibtn" onclick="goYear(1)">›</button>
     </div>
     <div class="summ">
-      <div class="sc"><div class="sv">${totD}</div><div class="sl">Дней</div></div>
-      <div class="sc"><div class="sv">${fmt(totH)}</div><div class="sl">Часов</div></div>
+      <div class="sc"><div class="sv">${totD}</div><div class="sl">${t('days')}</div></div>
+      <div class="sc"><div class="sv">${fmt(totH)}</div><div class="sl">${t('hours')}</div></div>
       <div class="sc"><div class="sv g">${fmtBig(totE)}</div><div class="sl">${sym}</div></div>
     </div>
     <div class="chart-wrap">
       <div class="mtoggle" style="margin-bottom:12px">
-        <button class="mbtn${S.sMode==='hours'?' on':''}"    onclick="S.sMode='hours';render()">Часы</button>
-        <button class="mbtn${S.sMode==='earnings'?' on':''}" onclick="S.sMode='earnings';render()">Заработок</button>
+        <button class="mbtn${S.sMode==='hours'?' on':''}"    onclick="S.sMode='hours';render()">${t('hours')}</button>
+        <button class="mbtn${S.sMode==='earnings'?' on':''}" onclick="S.sMode='earnings';render()">${t('earnings')}</button>
       </div>
       <svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${bars}</svg>
     </div>
     <div class="tbl-wrap">
       <table class="stbl">
-        <thead><tr><th>Месяц</th><th>Дней</th><th>Часов</th><th>Заработок</th></tr></thead>
+        <thead><tr><th>${t('month')}</th><th>${t('days')}</th><th>${t('hours')}</th><th>${t('earnings')}</th></tr></thead>
         <tbody>${rows}</tbody>
         <tfoot><tr>
-          <td>Итого</td><td>${totD}</td><td>${fmt(totH)}</td>
+          <td>${t('total')}</td><td>${totD}</td><td>${fmt(totH)}</td>
           <td style="color:#3DD6AC">${fmtBig(totE)}${sym}</td>
         </tr></tfoot>
       </table>
@@ -464,23 +653,31 @@ function rSettings() {
   const d=S.dcfg, sym=CUR[d.cur]?.s||d.cur;
   const clist=Object.entries(CUR).map(([c,i])=>
     `<button class="copt${d.cur===c?' sel':''}" onclick="selCur('${c}')">
-      <span>${i.l}</span><span>${i.s} ${c}</span>
+      <span>${L().cur[c]||c}</span><span>${i.s} ${c}</span>
+    </button>`).join('');
+  const llist=LANGS.map(l=>
+    `<button class="copt${S.cfg.lang===l?' sel':''}" onclick="setLang('${l}')">
+      <span>${LANGNAME[l]}</span><span>${l.toUpperCase()}</span>
     </button>`).join('');
   return `<div class="view">
-    <div class="shdr"><button class="ibtn" onclick="closeCfg()">←</button><h2>Настройки</h2></div>
+    <div class="shdr"><button class="ibtn" onclick="closeCfg()">←</button><h2>${t('settings')}</h2></div>
     <div class="sbody">
       <div class="scard">
-        <div class="clbl">Ставка в час</div>
+        <div class="clbl">${t('rate')}</div>
         <div class="rinrow">
           <input type="number" id="rin" class="rin" value="${d.rate}" oninput="dRate(this.value)">
           <span class="rsym">${sym}</span>
         </div>
       </div>
       <div class="scard">
-        <div class="clbl">Валюта</div>
+        <div class="clbl">${t('currency')}</div>
         <div class="curlist">${clist}</div>
       </div>
-      <button class="svbtn" onclick="saveCfg()">Сохранить</button>
+      <div class="scard">
+        <div class="clbl">${t('language')}</div>
+        <div class="curlist">${llist}</div>
+      </div>
+      <button class="svbtn" onclick="saveCfg()">${t('save')}</button>
     </div>
   </div>`;
 }
@@ -492,7 +689,7 @@ function rModal() {
   const fut=isFuture(S.mo,m.day);
   const ph=isH?(parseFloat(m.h)||0):calcRange(m.from,m.to);
   const pe=ph*S.cfg.rate;
-  const prev=ph>0?`<div class="prev">${ph}ч = ${pe.toFixed(0)} ${sym}</div>`:'';
+  const prev=ph>0?`<div class="prev">${ph}${L().hShort} = ${pe.toFixed(0)} ${sym}</div>`:'';
   const psets=[4,5,6,7,8].map(h=>
     `<button class="pre${m.h===String(h)?' on':''}" onclick="setP(${h})">${h}</button>`).join('');
 
@@ -500,37 +697,37 @@ function rModal() {
     <div class="sheet">
       <div class="drag"></div>
       <div class="mdate">${fullDate(S.mo,m.day)}</div>
-      ${fut?'<span class="plan-badge">📋 Планирование</span>':''}
-      <div class="mtitle">${fut?'Запланировать часы':'Сколько часов отработано?'}</div>
+      ${fut?`<span class="plan-badge">📋 ${t('planning')}</span>`:''}
+      <div class="mtitle">${fut?t('planHours'):t('hoursWorked')}</div>
       <div class="mtoggle">
-        <button class="mbtn${isH?' on':''}"  onclick="setMode('h')">Вручную</button>
-        <button class="mbtn${!isH?' on':''}" onclick="setMode('r')">По времени</button>
+        <button class="mbtn${isH?' on':''}"  onclick="setMode('h')">${t('manual')}</button>
+        <button class="mbtn${!isH?' on':''}" onclick="setMode('r')">${t('byTime')}</button>
       </div>
       ${isH?`
         <div class="hinrow">
           <input type="number" id="hin" class="hin" value="${m.h}" placeholder="0"
             min="0" max="24" step="0.5" oninput="setH(this.value)">
-          <span class="hlbl">ч</span>
+          <span class="hlbl">${L().hShort}</span>
         </div>
         <div class="presets">${psets}</div>
       `:`
         <div class="rrow">
           <div class="rfield">
-            <div class="rlbl">С</div>
+            <div class="rlbl">${t('from')}</div>
             <input type="time" id="tfrom" class="tmin" value="${m.from}" oninput="setFrom(this.value)">
           </div>
           <div class="rdash">—</div>
           <div class="rfield">
-            <div class="rlbl">До</div>
+            <div class="rlbl">${t('to')}</div>
             <input type="time" id="tto" class="tmin" value="${m.to}" oninput="setTo(this.value)">
           </div>
         </div>
       `}
       ${prev}
       <div class="mactions">
-        <button class="clrbtn" onclick="clearDay()">Очистить</button>
+        <button class="clrbtn" onclick="clearDay()">${t('clear')}</button>
         <button class="savbtn${fut?' plan':''}" onclick="saveDay()">
-          ${fut?'Запланировать':'Сохранить'}
+          ${fut?t('plan'):t('save')}
         </button>
       </div>
     </div>
@@ -539,16 +736,67 @@ function rModal() {
 
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
+  document.documentElement.lang = S.cfg.lang;
   let html;
   if      (S.view==='settings') html=rSettings();
   else if (S.view==='stats')    html=rStats();
   else                          html=rMain();
-  if (S.modal) html+=rModal();
+  if (S.modal)   html+=rModal();
+  if (S.profile) html+=rProfile();
   document.getElementById('app').innerHTML=html;
   if (S.modal) {
     const inp=document.getElementById(S.modal.mode==='h'?'hin':'tfrom');
     if (inp){ inp.focus(); if(S.modal.mode==='h')inp.select(); }
   }
+}
+
+// ── PROFILE SHEET ──────────────────────────────────────────────────────────
+function rProfile() {
+  const u=S.user;
+  const seg=LANGS.map(l=>
+    `<button class="${S.cfg.lang===l?'on':''}" onclick="setLang('${l}')">${l.toUpperCase()}</button>`).join('');
+
+  let body;
+  if (u) {
+    const dotCls = S.sync==='busy'?'busy':(S.sync==='idle'?'':'off');
+    const syncTxt= S.sync==='busy'?t('syncing'):(S.sync==='idle'?t('synced'):t('syncOff'));
+    const av = u.photo
+      ? `<img class="prof-av" src="${esc(u.photo)}" referrerpolicy="no-referrer" alt="">`
+      : `<div class="prof-av" style="display:flex;align-items:center;justify-content:center;font-size:34px">👤</div>`;
+    body=`
+      <div class="prof">
+        ${av}
+        <div class="prof-name">${esc(u.name)}</div>
+        <div class="prof-mail">${esc(u.email)}</div>
+        <div class="sync-row"><span class="sync-dot ${dotCls}"></span>${syncTxt}</div>
+      </div>
+      <div class="seg">${seg}</div>
+      <button class="signout" onclick="doSignOut()">${t('signOut')}</button>`;
+  } else {
+    body=`
+      <div class="prof">
+        <div class="prof-av" style="display:flex;align-items:center;justify-content:center;font-size:34px">👤</div>
+        <div class="prof-mail" style="margin-top:10px">${t('notSignedIn')}</div>
+      </div>
+      <div class="seg">${seg}</div>
+      <button class="signin" onclick="doSignIn()">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.5-5.2l-6.2-5.3C29.1 35.1 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.2 5.3C39.9 36.7 44 31 44 24c0-1.2-.1-2.3-.4-3.5z"/>
+        </svg>
+        ${t('signIn')}
+      </button>`;
+  }
+
+  return `<div class="overlay" onclick="ovProfile(event)">
+    <div class="sheet">
+      <div class="drag"></div>
+      <div class="mtitle" style="margin-bottom:16px">${t('profile')}</div>
+      ${body}
+    </div>
+  </div>`;
 }
 
 // ── Live preview (no re-render) ────────────────────────────────────────────
@@ -559,7 +807,7 @@ function updPrev() {
   let el=document.querySelector('.prev');
   if (ph>0) {
     if (!el){ el=document.createElement('div'); el.className='prev'; document.querySelector('.mactions').before(el); }
-    el.textContent=`${ph}ч = ${pe.toFixed(0)} ${sym}`;
+    el.textContent=`${ph}${L().hShort} = ${pe.toFixed(0)} ${sym}`;
   } else if (el) el.remove();
 }
 
@@ -596,6 +844,19 @@ function saveDay()     {
   if(h>0) setEnt(m.day, Math.min(Math.round(h*100)/100, 24));
   else    delEnt(m.day);
   S.modal=null; render();
+}
+
+// Profile / auth / language
+function openProfile()  { S.profile=true;  render(); }
+function ovProfile(e)   { if(e.target.classList.contains('overlay')){ S.profile=false; render(); } }
+function doSignIn()     { if(window.__fb) window.__fb.signIn(); }
+function doSignOut()    { S.profile=false; if(window.__fb) window.__fb.signOut(); render(); }
+function setLang(l)     {
+  if(!LANGS.includes(l)) return;
+  S.cfg.lang=l;
+  if(S.dcfg) S.dcfg.lang=l;   // keep settings draft in sync
+  save();
+  render();
 }
 
 // Stats actions

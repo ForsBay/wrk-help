@@ -1,7 +1,10 @@
 {
-  "name": "Рабочие часы",
-  "short_name": "Часы",
+  "name": "Work Hours",
+  "short_name": "Hours",
+  "lang": "en",
+  "description": "Track and plan your working hours, see earnings and sync across devices.",
   "display": "standalone",
+  "scope": "./",
   "start_url": "./",
   "background_color": "#0B1220",
   "theme_color": "#0B1220",
@@ -9,12 +12,14 @@
     {
       "src": "icon-192.PNG",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icon-512.PNG",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
