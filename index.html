@@ -514,7 +514,7 @@ function rMain() {
       <span class="dn">${d}</span>
       ${has
         ? `<span class="dh">${h}${hs}</span>
-           <span class="de">${fmtCell(earned)}${sym}</span>
+           ${h>0?`<span class="de">${fmtCell(earned)}${sym}</span>`:''}
            ${fut?`<span class="dplan">${t('planBadge')}</span>`:''}`
         : '<span class="dp">+</span>'}
     </button>`;
@@ -840,9 +840,9 @@ function setP(h)       {
 function clearDay()    { delEnt(S.modal.day); S.modal=null; render(); }
 function saveDay()     {
   const m=S.modal;
-  const h=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
-  if(h>0) setEnt(m.day, Math.min(Math.round(h*100)/100, 24));
-  else    delEnt(m.day);
+  const raw=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
+  const h=Math.min(Math.max(raw,0), 24);
+  setEnt(m.day, Math.round(h*100)/100);
   S.modal=null; render();
 }
 
