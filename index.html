@@ -169,6 +169,41 @@ input{font-family:inherit}
 </head>
 <body>
 <div id="app"></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBSw70eKBDUDYZkMGvF961sjoMFHwWd-KM",
+  authDomain: "workh-cdc4d.firebaseapp.com",
+  projectId: "workh-cdc4d",
+  storageBucket: "workh-cdc4d.firebasestorage.app",
+  messagingSenderId: "775094572168",
+  appId: "1:775094572168:web:d25ad278fa785621cbbb3d",
+  measurementId: "G-0P46Q6EYTJ"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+window.auth = auth;
+window.googleProvider = new GoogleAuthProvider();
+window.signInGoogle = () =>
+  signInWithPopup(auth, window.googleProvider);
+
+window.signOutGoogle = () =>
+  signOut(auth);
+
+onAuthStateChanged(auth, user => {
+  console.log("USER:", user);
+});
+</script>
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
 const CUR = {
