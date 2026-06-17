@@ -186,6 +186,83 @@ input{font-family:inherit}
   border-radius:13px;color:#E07A5F;font-size:16px;font-weight:700;padding:14px;width:100%;margin-top:16px}
 .signin{background:#5A8DF0;border:none;border-radius:13px;color:#fff;font-size:16px;
   font-weight:700;padding:15px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px}
+
+/* ── Sheet drag & expand ── */
+.sheet{overflow-y:auto;max-height:78dvh;transition:max-height .38s cubic-bezier(.32,.72,0,1)}
+.sheet.expanded{max-height:93dvh}
+.drag-wrap{padding:10px 0 2px;display:flex;justify-content:center;cursor:grab;margin-top:-10px}
+
+/* ── Extra options ── */
+.extra-trigger{display:block;width:100%;background:none;border:none;
+  color:#E07A5F;font-size:14px;font-weight:700;padding:12px 0 2px;text-align:center;letter-spacing:.02em}
+.extra-panel{overflow:hidden;max-height:0;opacity:0;
+  transition:max-height .38s cubic-bezier(.32,.72,0,1),opacity .22s ease}
+.sheet.expanded .extra-panel{max-height:440px;opacity:1}
+.extra-section{padding-top:14px;border-top:1px solid #1E304A;margin-top:6px}
+.extra-clbl{font-size:11px;color:#5E7A94;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px}
+.ot-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ot-inp{flex:1;background:#0B1220;border:2px solid #F5A623;border-radius:12px;
+  color:#D8E4F2;font-size:26px;font-weight:700;padding:10px 14px;outline:none;text-align:center}
+.ot-lbl{font-size:13px;color:#5E7A94;font-weight:600;white-space:nowrap}
+.mult-row{display:flex;gap:6px;margin-bottom:8px}
+.mult-btn{flex:1;background:#0B1220;border:1.5px solid #1E304A;border-radius:10px;
+  color:#D8E4F2;font-size:14px;font-weight:600;padding:10px 0}
+.mult-btn.on{background:rgba(245,166,35,.15);border-color:#F5A623;color:#F5A623}
+.ot-prev{text-align:center;color:#F5A623;font-size:13px;font-weight:600;padding:4px 0 6px}
+
+/* ── Light theme ── */
+html.light{color-scheme:light}
+html.light body{background:#F0F4FA;color:#1A2742}
+html.light .ibtn{background:#E8EEF7;border-color:#C8D4E8;color:#1A2742}
+html.light .dc{background:#fff;border-color:#DDE4EE}
+html.light .dc.active{background:rgba(74,125,240,.09);border-color:rgba(74,125,240,.4)}
+html.light .dc .dn{color:#1A2742}
+html.light .dc.future .dn{color:#8A9BB0}
+html.light .dc .dp{color:#B8C8D8}
+html.light .sc{background:#fff;border-color:#DDE4EE}
+html.light .sl{color:#6B7F96}
+html.light .rbadge{background:#fff;border-color:#DDE4EE;color:#6B7F96}
+html.light .hdr-sub{color:#6B7F96}
+html.light .mlbl{color:#1A2742}
+html.light .dow{color:#6B7F96}
+html.light .chart-wrap,html.light .tbl-wrap{background:#fff;border-color:#DDE4EE}
+html.light .stbl th{color:#6B7F96;border-bottom-color:#DDE4EE}
+html.light .stbl tbody td{border-bottom-color:rgba(180,196,216,.4)}
+html.light .stbl tfoot td{background:rgba(74,125,240,.06);border-top-color:#DDE4EE}
+html.light .scard{background:#fff;border-color:#DDE4EE}
+html.light .clbl{color:#6B7F96}
+html.light .rin{background:#F0F4FA;border-color:#DDE4EE;color:#1A2742}
+html.light .rsym{color:#4A7DF0}
+html.light .copt{background:#F7F9FC;border-color:#DDE4EE;color:#1A2742}
+html.light .copt.sel{background:rgba(74,125,240,.1);border-color:#4A7DF0;color:#4A7DF0}
+html.light .overlay{background:rgba(0,0,0,.45)}
+html.light .sheet{background:#fff;border-color:#DDE4EE}
+html.light .drag{background:#C8D4E4}
+html.light .mdate{color:#6B7F96}
+html.light .mtitle{color:#1A2742}
+html.light .mtoggle{background:#F0F4FA}
+html.light .mbtn{color:#6B7F96}
+html.light .mbtn.on{background:#fff;color:#1A2742}
+html.light .hin{background:#F0F4FA;border-color:#4A7DF0;color:#1A2742}
+html.light .tmin{background:#F0F4FA;border-color:#4A7DF0;color:#1A2742}
+html.light .pre{background:#F0F4FA;border-color:#DDE4EE;color:#1A2742}
+html.light .pre.on{background:#4A7DF0;border-color:#4A7DF0;color:#fff}
+html.light .clrbtn{background:#F0F4FA;border-color:#DDE4EE;color:#6B7F96}
+html.light .hlbl,.light .rlbl,.light .rdash{color:#6B7F96}
+html.light .extra-trigger{color:#C0634A}
+html.light .extra-section{border-top-color:#DDE4EE}
+html.light .extra-clbl{color:#6B7F96}
+html.light .ot-inp{background:#F0F4FA;color:#1A2742}
+html.light .mult-btn{background:#F7F9FC;border-color:#DDE4EE;color:#1A2742}
+html.light .mult-btn.on{background:rgba(245,166,35,.1);border-color:#F5A623;color:#C07A00}
+html.light .prof-av{border-color:#DDE4EE;background:#F0F4FA}
+html.light .prof-name{color:#1A2742}
+html.light .prof-mail{color:#6B7F96}
+html.light .sync-row{color:#6B7F96}
+html.light .seg{background:#F0F4FA}
+html.light .seg button{color:#6B7F96}
+html.light .seg button.on{background:#fff;color:#1A2742}
+html.light .signout{background:rgba(192,99,74,.09);border-color:rgba(192,99,74,.3)}
 </style>
 </head>
 <body>
@@ -304,7 +381,7 @@ function push(state) {
       // silently reappear from the cloud. Push the regular update first...
       await setDoc(
         ref,
-        { cfg: state.cfg, data: state.data, updatedAt: serverTimestamp() },
+        { cfg: state.cfg, data: state.data, ot: state.ot||{}, updatedAt: serverTimestamp() },
         { merge: true }
       );
       // ...then explicitly delete the fields for any day the user cleared.
@@ -457,6 +534,8 @@ const I18N = {
     calendarSync:'Calendar sync', on:'On', off:'Off',
     calendarNeedsSignIn:'Sign in with Google first', calTitle:'Work',
     exportData:'Export data', exportYear:'Export year (CSV)', exportBackup:'Full backup (JSON)',
+    overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Rate multiplier',
+    additionalOpts:'Additional options',theme:'Theme',themeDark:'Dark',themeLight:'Light',
     dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     cur:{PLN:'Polish Zloty',RUB:'Russian Ruble',USD:'US Dollar',EUR:'Euro',GBP:'British Pound'}
   },
@@ -473,6 +552,8 @@ const I18N = {
     calendarSync:'Синхронизация с календарём', on:'Вкл', off:'Выкл',
     calendarNeedsSignIn:'Сначала войдите через Google', calTitle:'Работа',
     exportData:'Экспорт данных', exportYear:'Экспорт года (CSV)', exportBackup:'Полный бэкап (JSON)',
+    overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Коэффициент',
+    additionalOpts:'Дополнительные опции',theme:'Тема',themeDark:'Тёмная',themeLight:'Светлая',
     dow:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
     cur:{PLN:'Злотый',RUB:'Рубль',USD:'Доллар',EUR:'Евро',GBP:'Фунт'}
   },
@@ -489,6 +570,8 @@ const I18N = {
     calendarSync:'Synchronizacja z kalendarzem', on:'Wł', off:'Wył',
     calendarNeedsSignIn:'Najpierw zaloguj się przez Google', calTitle:'Praca',
     exportData:'Eksport danych', exportYear:'Eksport roku (CSV)', exportBackup:'Pełny backup (JSON)',
+    overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Mnożnik',
+    additionalOpts:'Dodatkowe opcje',theme:'Motyw',themeDark:'Ciemny',themeLight:'Jasny',
     dow:['Pon','Wt','Śr','Czw','Pt','Sob','Nd'],
     cur:{PLN:'Złoty',RUB:'Rubel',USD:'Dolar',EUR:'Euro',GBP:'Funt'}
   }
@@ -504,9 +587,10 @@ const SK = 'wh_v2';
 // ── State ──────────────────────────────────────────────────────────────────
 let S = {
   view:    'main',   // main | settings | stats
-  cfg:     { rate:25, cur:'PLN', lang:'en', calSync:false },
+  cfg:     { rate:25, cur:'PLN', lang:'en', calSync:false, theme:'dark' },
   mo:      moKey(),
   data:    {},       // { 'YYYY-MM': { day: hours } }
+  ot:      {},       // { 'YYYY-MM': { day: { h: overtime_hours, mult: rate_multiplier } } }
   calIds:  {},       // { 'YYYY-MM': { day: googleCalendarEventId } } — local only
   modal:   null,
   dcfg:    null,
@@ -525,13 +609,14 @@ function load() {
     if (d.cfg)    S.cfg    = { ...S.cfg, ...d.cfg };
     if (d.data)   S.data   = d.data;
     if (d.calIds) S.calIds = d.calIds;
+    if (d.ot)     S.ot     = d.ot;
   } catch(e) {}
 }
 function save() {
-  try { localStorage.setItem(SK, JSON.stringify({cfg:S.cfg, data:S.data, calIds:S.calIds})); }
+  try { localStorage.setItem(SK, JSON.stringify({cfg:S.cfg, data:S.data, calIds:S.calIds, ot:S.ot})); }
   catch(e) {}
   if (!applyingRemote && window.__fb && S.user) {
-    window.__fb.push({ cfg:S.cfg, data:S.data });
+    window.__fb.push({ cfg:S.cfg, data:S.data, ot:S.ot });
   }
 }
 
@@ -555,6 +640,11 @@ window.__app = {
       if (remote.data) {
         for (const mk in remote.data) {
           S.data[mk] = { ...(S.data[mk]||{}), ...remote.data[mk] };
+        }
+      }
+      if (remote.ot) {
+        for (const mk in remote.ot) {
+          S.ot[mk] = { ...(S.ot[mk]||{}), ...remote.ot[mk] };
         }
       }
       save();
@@ -624,16 +714,19 @@ function rMain() {
   const dow = L().dow.map((d,i)=>`<div class="dow${i>=5?' wknd':''}">${d}</div>`).join('');
   const hs = L().hShort;
 
+  const otMo=S.ot[S.mo]||{};
   const grid = cells.map(d=>{
     if(!d) return '<div></div>';
     const h=e[d], has=h!==undefined;
     const today=isToday(S.mo,d), fut=isFuture(S.mo,d), wk=isWknd(S.mo,d);
-    const earned=has?h*S.cfg.rate:0;
+    const otDay=otMo[d];
+    const otEarn=otDay?otDay.h*otDay.mult*S.cfg.rate:0;
+    const earned=has?(h*S.cfg.rate+otEarn):0;
     return `<button class="dc${has?' active':''}${today?' today':''}${wk?' wknd':''}${fut?' future':''}"
       onclick="openDay(${d})">
       <span class="dn">${d}</span>
       ${has
-        ? `<span class="dh">${h}${hs}</span>
+        ? `<span class="dh">${h}${hs}${otDay&&otDay.h>0?`<span style="color:#F5A623;font-size:9px"> +${otDay.h}</span>`:''}</span>
            ${h>0?`<span class="de">${fmtCell(earned)}${sym}</span>`:''}
            ${fut?`<span class="dplan">${t('planBadge')}</span>`:''}`
         : '<span class="dp">+</span>'}
@@ -641,7 +734,8 @@ function rMain() {
   }).join('');
 
   const th=Object.values(e).reduce((a,h)=>a+h,0);
-  const te=th*S.cfg.rate;
+  const ote=Object.values(otMo).reduce((a,o)=>a+o.h*o.mult*S.cfg.rate,0);
+  const te=th*S.cfg.rate+ote;
   const wd=Object.keys(e).length;
 
   const profBtn = (S.user && S.user.photo)
@@ -681,7 +775,9 @@ function getYearData(year) {
     const mk=`${year}-${p2(i+1)}`;
     const e=S.data[mk]||{};
     const h=Object.values(e).reduce((a,v)=>a+v,0);
-    return { mk, days:Object.keys(e).length, hours:h, earnings:h*S.cfg.rate };
+    const otMo=S.ot[mk]||{};
+    const ote=Object.values(otMo).reduce((a,o)=>a+o.h*o.mult*S.cfg.rate,0);
+    return { mk, days:Object.keys(e).length, hours:h, earnings:h*S.cfg.rate+ote };
   });
 }
 
@@ -798,6 +894,13 @@ function rSettings() {
         <div class="curlist">${llist}</div>
       </div>
       <div class="scard">
+        <div class="clbl">${t('theme')}</div>
+        <div class="mtoggle">
+          <button class="mbtn${(d.theme||'dark')==='dark'?' on':''}" onclick="setTheme('dark')">${t('themeDark')}</button>
+          <button class="mbtn${d.theme==='light'?' on':''}" onclick="setTheme('light')">${t('themeLight')}</button>
+        </div>
+      </div>
+      <div class="scard">
         <div class="clbl">${t('calendarSync')}</div>
         <div class="mtoggle">
           <button class="mbtn${!d.calSync?' on':''}" onclick="toggleCalSync(false)">${t('off')}</button>
@@ -820,14 +923,20 @@ function rModal() {
   const isH=m.mode==='h';
   const fut=isFuture(S.mo,m.day);
   const ph=isH?(parseFloat(m.h)||0):calcRange(m.from,m.to);
-  const pe=ph*S.cfg.rate;
-  const prev=ph>0?`<div class="prev">${ph}${L().hShort} = ${pe.toFixed(0)} ${sym}</div>`:'';
+  const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
+  const otH=otData?otData.h:0;
+  const otMult=otData?otData.mult:1.5;
+  const pe=ph*S.cfg.rate + otH*otMult*S.cfg.rate;
+  const prev=(ph>0||otH>0)
+    ?`<div class="prev">${ph}${L().hShort}${otH>0?` +${otH}OT`:''} = ${pe.toFixed(0)} ${sym}</div>`:'';
   const psets=[4,5,6,7,8].map(h=>
     `<button class="pre${m.h===String(h)?' on':''}" onclick="setP(${h})">${h}</button>`).join('');
+  const multOpts=[1.25,1.5,2].map(v=>
+    `<button class="mult-btn${otMult===v?' on':''}" onclick="setOTMult(${v})">${v}×</button>`).join('');
 
   return `<div class="overlay" onclick="ovClick(event)">
-    <div class="sheet">
-      <div class="drag"></div>
+    <div class="sheet${m.extraOpen?' expanded':''}" id="daySheet">
+      <div class="drag-wrap" id="dragHandle"><div class="drag" style="margin:0"></div></div>
       <div class="mdate">${fullDate(S.mo,m.day)}</div>
       ${fut?`<span class="plan-badge">📋 ${t('planning')}</span>`:''}
       <div class="mtitle">${fut?t('planHours'):t('hoursWorked')}</div>
@@ -862,6 +971,22 @@ function rModal() {
           ${fut?t('plan'):t('save')}
         </button>
       </div>
+      <button class="extra-trigger" id="extraTrig" onclick="toggleExtra()">
+        ${t('additionalOpts')} ${m.extraOpen?'▴':'▾'}
+      </button>
+      <div class="extra-panel" id="extraPanel">
+        <div class="extra-section">
+          <div class="extra-clbl">${t('overtime')}</div>
+          <div class="ot-row">
+            <input type="number" class="ot-inp" value="${otH||''}" placeholder="0"
+              min="0" max="24" step="0.5" oninput="setOT(this.value)">
+            <span class="ot-lbl">${L().hShort} OT</span>
+          </div>
+          <div class="extra-clbl">${t('overtimeMult')}</div>
+          <div class="mult-row">${multOpts}</div>
+          ${otH>0?`<div class="ot-prev">+${otH}${L().hShort} × ${otMult} = ${(otH*otMult*S.cfg.rate).toFixed(0)} ${sym}</div>`:''}
+        </div>
+      </div>
     </div>
   </div>`;
 }
@@ -869,6 +994,10 @@ function rModal() {
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
   document.documentElement.lang = S.cfg.lang;
+  const effectiveTheme = (S.view==='settings'&&S.dcfg) ? (S.dcfg.theme||'dark') : (S.cfg.theme||'dark');
+  document.documentElement.className = effectiveTheme==='light' ? 'light' : '';
+  const mc=document.querySelector('meta[name="theme-color"]');
+  if (mc) mc.content = effectiveTheme==='light' ? '#F0F4FA' : '#0B1220';
   let html;
   if      (S.view==='settings') html=rSettings();
   else if (S.view==='stats')    html=rStats();
@@ -879,6 +1008,7 @@ function render() {
   if (S.modal) {
     const inp=document.getElementById(S.modal.mode==='h'?'hin':'tfrom');
     if (inp){ inp.focus(); if(S.modal.mode==='h')inp.select(); }
+    requestAnimationFrame(attachDrag);
   }
 }
 
@@ -935,21 +1065,96 @@ function rProfile() {
 function updPrev() {
   const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
   const ph=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
-  const pe=ph*S.cfg.rate;
+  const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
+  const otH=otData?otData.h:0;
+  const otMult=otData?otData.mult:1.5;
+  const pe=ph*S.cfg.rate + otH*otMult*S.cfg.rate;
   let el=document.querySelector('.prev');
-  if (ph>0) {
+  if (ph>0||otH>0) {
     if (!el){ el=document.createElement('div'); el.className='prev'; document.querySelector('.mactions').before(el); }
-    el.textContent=`${ph}${L().hShort} = ${pe.toFixed(0)} ${sym}`;
+    el.textContent=`${ph}${L().hShort}${otH>0?` +${otH}OT`:''} = ${pe.toFixed(0)} ${sym}`;
   } else if (el) el.remove();
+}
+
+// ── Overtime ───────────────────────────────────────────────────────────────
+function setOT(v) {
+  const m=S.modal;
+  const h=Math.min(parseFloat(v)||0, 24);
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const ex=S.ot[S.mo][m.day]||{h:0,mult:1.5};
+  S.ot[S.mo][m.day]={...ex,h};
+  updOTPrev();
+}
+function setOTMult(v) {
+  const m=S.modal;
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const ex=S.ot[S.mo][m.day]||{h:0,mult:1.5};
+  S.ot[S.mo][m.day]={...ex,mult:v};
+  document.querySelectorAll('.mult-btn').forEach(b=>
+    b.classList.toggle('on',parseFloat(b.textContent)===v));
+  updOTPrev();
+}
+function updOTPrev() {
+  const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
+  const otH=otData?otData.h:0;
+  const otMult=otData?otData.mult:1.5;
+  let el=document.querySelector('.ot-prev');
+  if (otH>0) {
+    if (!el){
+      el=document.createElement('div'); el.className='ot-prev';
+      const mr=document.querySelector('.mult-row');
+      if (mr) mr.after(el);
+    }
+    el.textContent=`+${otH}${L().hShort} × ${otMult} = ${(otH*otMult*S.cfg.rate).toFixed(0)} ${sym}`;
+  } else if (el) el.remove();
+  updPrev();
+}
+
+// ── Extra panel toggle & drag ──────────────────────────────────────────────
+function toggleExtra() {
+  S.modal.extraOpen = !S.modal.extraOpen;
+  const sheet=document.getElementById('daySheet');
+  if (sheet) sheet.classList.toggle('expanded', S.modal.extraOpen);
+  const trig=document.getElementById('extraTrig');
+  if (trig) trig.textContent=`${t('additionalOpts')} ${S.modal.extraOpen?'▴':'▾'}`;
+}
+function attachDrag() {
+  const handle=document.getElementById('dragHandle');
+  const sheet =document.getElementById('daySheet');
+  if (!handle||!sheet) return;
+  let startY=0;
+  handle.addEventListener('touchstart', e=>{ startY=e.touches[0].clientY; },{passive:true});
+  handle.addEventListener('touchend', e=>{
+    const dy=e.changedTouches[0].clientY-startY;
+    if (dy < -35 && !S.modal.extraOpen) {
+      S.modal.extraOpen=true;
+      sheet.classList.add('expanded');
+      const trig=document.getElementById('extraTrig');
+      if (trig) trig.textContent=`${t('additionalOpts')} ▴`;
+    } else if (dy > 35 && S.modal.extraOpen) {
+      S.modal.extraOpen=false;
+      sheet.classList.remove('expanded');
+      const trig=document.getElementById('extraTrig');
+      if (trig) trig.textContent=`${t('additionalOpts')} ▾`;
+    } else if (dy > 80 && !S.modal.extraOpen) {
+      S.modal=null; render();
+    }
+  },{passive:true});
+}
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function setTheme(th) {
+  if (S.dcfg) S.dcfg.theme=th;
+  render();
 }
 
 // ── Actions ────────────────────────────────────────────────────────────────
 function goMo(d)       { S.mo=moShift(S.mo,d); render(); }
 
 function openDay(d)    {
-  // No future block — future days open in "plan" mode
   const ex=ents()[d];
-  S.modal={day:d, mode:'h', h:ex!==undefined?String(ex):'', from:'09:00', to:'17:00'};
+  S.modal={day:d, mode:'h', h:ex!==undefined?String(ex):'', from:'09:00', to:'17:00', extraOpen:false};
   render();
 }
 
@@ -992,6 +1197,7 @@ function syncToCalendar(day,h,from,to) {
 function clearDay()    {
   const day=S.modal.day, calId=S.calIds[S.mo]&&S.calIds[S.mo][day];
   delEnt(day);
+  if (S.ot[S.mo]) delete S.ot[S.mo][day];
   if (calId && S.cfg.calSync && window.__fb) window.__fb.deleteCalendarEvent(calId);
   S.modal=null; render();
 }
@@ -1002,6 +1208,13 @@ function saveDay()     {
   const from=m.mode==='r'?m.from:'09:00';
   const to  =m.mode==='r'?m.to  :addH(from,h);
   setEnt(m.day, Math.round(h*100)/100);
+  // persist overtime
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const otData=S.ot[S.mo][m.day];
+  const otH=otData?otData.h:0;
+  const otMult=otData?otData.mult:1.5;
+  if (otH>0) S.ot[S.mo][m.day]={h:otH,mult:otMult};
+  else if (S.ot[S.mo][m.day]) delete S.ot[S.mo][m.day];
   syncToCalendar(m.day,h,from,to);
   S.modal=null; render();
 }
