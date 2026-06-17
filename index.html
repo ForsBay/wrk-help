@@ -206,6 +206,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
+  deleteField,
   onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
@@ -224,15 +226,21 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 const provider = new GoogleAuthProvider();
+// extra scope so we can write events into the user's Google Calendar
+provider.addScope('https://www.googleapis.com/auth/calendar.events');
 
 let currentUser = null;   // raw Firebase user
 let unsub       = null;   // Firestore snapshot unsubscribe
 let pushTimer   = null;   // debounce timer for cloud writes
+let pendingDeletes = {};  // { 'YYYY-MM': Set(['5','12']) } days removed since last push
+let calToken    = null;   // Google OAuth access token (Calendar scope), session-only
+let calExp      = 0;      // ms timestamp when calToken expires
 
 // ── Sign in (popup, with redirect fallback for installed PWAs) ──────────────
 async function signIn() {
   try {
-    await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, provider);
+    saveCalToken(result);
   } catch (e) {
     const fallback = [
       'auth/popup-blocked',
@@ -247,35 +255,131 @@ async function signIn() {
   }
 }
 
+function saveCalToken(result) {
+  try {
+    const cred = GoogleAuthProvider.credentialFromResult(result);
+    if (cred && cred.accessToken) {
+      calToken = cred.accessToken;
+      calExp = Date.now() + 55 * 60 * 1000; // Google tokens last ~60min, refresh a bit early
+    }
+  } catch (_) {}
+}
+
+// Re-prompt Google consent to get a fresh Calendar access token (popup, user-gesture only)
+async function ensureCalendarAccess() {
+  if (calToken && Date.now() < calExp) return true;
+  try {
+    const result = await signInWithPopup(auth, provider);
+    saveCalToken(result);
+    return !!calToken;
+  } catch (e) {
+    console.error('Calendar consent failed:', e);
+    return false;
+  }
+}
+
 function signOutUser() {
   if (unsub) { unsub(); unsub = null; }
+  calToken = null; calExp = 0;
   return signOut(auth);
 }
 
-// ── Push local state to the cloud (debounced) ───────────────────────────────
+// ── Push local state to the cloud (debounced) ──────────────────────────────
+function recordDelete(mo, day) {
+  if (!pendingDeletes[mo]) pendingDeletes[mo] = new Set();
+  pendingDeletes[mo].add(String(day));
+}
+
 function push(state) {
   if (!currentUser) return;
   window.__app.setSync('busy');
   clearTimeout(pushTimer);
   pushTimer = setTimeout(async () => {
+    const deletes = pendingDeletes;
+    pendingDeletes = {};
     try {
+      const ref = doc(db, 'users', currentUser.uid);
+      // merge:true only adds/overwrites fields — it never removes a nested
+      // map key that's missing from the update, so deleted days would
+      // silently reappear from the cloud. Push the regular update first...
       await setDoc(
-        doc(db, 'users', currentUser.uid),
+        ref,
         { cfg: state.cfg, data: state.data, updatedAt: serverTimestamp() },
         { merge: true }
       );
+      // ...then explicitly delete the fields for any day the user cleared.
+      const delPatch = {};
+      for (const mo in deletes) {
+        for (const day of deletes[mo]) delPatch[`data.${mo}.${day}`] = deleteField();
+      }
+      if (Object.keys(delPatch).length) await updateDoc(ref, delPatch);
       window.__app.setSync('idle');
     } catch (e) {
       console.error('Cloud write failed:', e);
+      // put deletions back so the next push retries them
+      for (const mo in deletes) {
+        if (!pendingDeletes[mo]) pendingDeletes[mo] = new Set();
+        deletes[mo].forEach(d => pendingDeletes[mo].add(d));
+      }
       window.__app.setSync('off');
     }
   }, 600);
 }
 
-window.__fb = { signIn, signOut: signOutUser, push };
+// ── Calendar sync (writes a Calendar event per logged/planned day) ─────────
+const CAL_API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+
+function addHoursToTime(hhmm, hours) {
+  const [h, m] = hhmm.split(':').map(Number);
+  let total = h * 60 + m + Math.round(hours * 60);
+  total = ((total % 1440) + 1440) % 1440;
+  const eh = Math.floor(total / 60), em = total % 60;
+  return `${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`;
+}
+
+async function calFetch(url, opts) {
+  const ok = await ensureCalendarAccess();
+  if (!ok) return null;
+  const res = await fetch(url, {
+    ...opts,
+    headers: { ...(opts && opts.headers), Authorization: `Bearer ${calToken}` }
+  });
+  if (res.status === 401) { calToken = null; calExp = 0; return null; } // stale token
+  if (res.status === 204) return {};
+  return res.ok ? res.json() : null;
+}
+
+async function upsertCalendarEvent({ mo, day, from, to, title, notes, calId }) {
+  const date = `${mo}-${String(day).padStart(2,'0')}`;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const body = {
+    summary: title,
+    description: notes,
+    start: { dateTime: `${date}T${from}:00`, timeZone: tz },
+    end:   { dateTime: `${date}T${to}:00`,   timeZone: tz }
+  };
+  try {
+    const data = calId
+      ? await calFetch(`${CAL_API}/${calId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
+      : await calFetch(CAL_API, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    return data ? data.id : null;
+  } catch (e) { console.error('Calendar write failed:', e); return null; }
+}
+
+async function deleteCalendarEvent(calId) {
+  if (!calId) return;
+  try { await calFetch(`${CAL_API}/${calId}`, { method: 'DELETE' }); }
+  catch (e) { console.error('Calendar delete failed:', e); }
+}
+
+window.__fb = {
+  signIn, signOut: signOutUser, push, recordDelete,
+  ensureCalendarAccess, upsertCalendarEvent, deleteCalendarEvent
+};
 
 // Complete any pending redirect sign-in (PWA / mobile)
-getRedirectResult(auth).catch(e => console.error('Redirect result:', e));
+getRedirectResult(auth).then(result => { if (result) saveCalToken(result); })
+  .catch(e => console.error('Redirect result:', e));
 
 // ── React to auth changes ───────────────────────────────────────────────────
 onAuthStateChanged(auth, async user => {
@@ -350,6 +454,9 @@ const I18N = {
     profile:'Profile', signIn:'Sign in with Google', signOut:'Sign out',
     notSignedIn:'Not signed in', synced:'Synced', syncing:'Syncing…', syncOff:'Offline',
     yearSuffix:'',
+    calendarSync:'Calendar sync', on:'On', off:'Off',
+    calendarNeedsSignIn:'Sign in with Google first', calTitle:'Work',
+    exportData:'Export data', exportYear:'Export year (CSV)', exportBackup:'Full backup (JSON)',
     dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     cur:{PLN:'Polish Zloty',RUB:'Russian Ruble',USD:'US Dollar',EUR:'Euro',GBP:'British Pound'}
   },
@@ -363,6 +470,9 @@ const I18N = {
     profile:'Профиль', signIn:'Войти через Google', signOut:'Выйти',
     notSignedIn:'Вход не выполнен', synced:'Синхронизировано', syncing:'Синхронизация…', syncOff:'Не в сети',
     yearSuffix:' год',
+    calendarSync:'Синхронизация с календарём', on:'Вкл', off:'Выкл',
+    calendarNeedsSignIn:'Сначала войдите через Google', calTitle:'Работа',
+    exportData:'Экспорт данных', exportYear:'Экспорт года (CSV)', exportBackup:'Полный бэкап (JSON)',
     dow:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
     cur:{PLN:'Злотый',RUB:'Рубль',USD:'Доллар',EUR:'Евро',GBP:'Фунт'}
   },
@@ -376,6 +486,9 @@ const I18N = {
     profile:'Profil', signIn:'Zaloguj przez Google', signOut:'Wyloguj się',
     notSignedIn:'Nie zalogowano', synced:'Zsynchronizowano', syncing:'Synchronizacja…', syncOff:'Offline',
     yearSuffix:' rok',
+    calendarSync:'Synchronizacja z kalendarzem', on:'Wł', off:'Wył',
+    calendarNeedsSignIn:'Najpierw zaloguj się przez Google', calTitle:'Praca',
+    exportData:'Eksport danych', exportYear:'Eksport roku (CSV)', exportBackup:'Pełny backup (JSON)',
     dow:['Pon','Wt','Śr','Czw','Pt','Sob','Nd'],
     cur:{PLN:'Złoty',RUB:'Rubel',USD:'Dolar',EUR:'Euro',GBP:'Funt'}
   }
@@ -391,9 +504,10 @@ const SK = 'wh_v2';
 // ── State ──────────────────────────────────────────────────────────────────
 let S = {
   view:    'main',   // main | settings | stats
-  cfg:     { rate:25, cur:'PLN', lang:'en' },
+  cfg:     { rate:25, cur:'PLN', lang:'en', calSync:false },
   mo:      moKey(),
   data:    {},       // { 'YYYY-MM': { day: hours } }
+  calIds:  {},       // { 'YYYY-MM': { day: googleCalendarEventId } } — local only
   modal:   null,
   dcfg:    null,
   yearKey: new Date().getFullYear(),
@@ -408,12 +522,13 @@ let applyingRemote = false; // guard so cloud-applied changes don't bounce back
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(SK) || '{}');
-    if (d.cfg)  S.cfg  = { ...S.cfg, ...d.cfg };
-    if (d.data) S.data = d.data;
+    if (d.cfg)    S.cfg    = { ...S.cfg, ...d.cfg };
+    if (d.data)   S.data   = d.data;
+    if (d.calIds) S.calIds = d.calIds;
   } catch(e) {}
 }
 function save() {
-  try { localStorage.setItem(SK, JSON.stringify({cfg:S.cfg, data:S.data})); }
+  try { localStorage.setItem(SK, JSON.stringify({cfg:S.cfg, data:S.data, calIds:S.calIds})); }
   catch(e) {}
   if (!applyingRemote && window.__fb && S.user) {
     window.__fb.push({ cfg:S.cfg, data:S.data });
@@ -484,7 +599,12 @@ function calcRange(a,b) {
 // ── Entries ────────────────────────────────────────────────────────────────
 function ents()        { return S.data[S.mo]||{}; }
 function setEnt(d,h)   { if(!S.data[S.mo])S.data[S.mo]={}; S.data[S.mo][d]=h; save(); }
-function delEnt(d)     { if(S.data[S.mo])delete S.data[S.mo][d]; save(); }
+function delEnt(d)     {
+  if(S.data[S.mo]) delete S.data[S.mo][d];
+  if(S.calIds[S.mo]) delete S.calIds[S.mo][d];
+  if(window.__fb && window.__fb.recordDelete) window.__fb.recordDelete(S.mo, d);
+  save();
+}
 
 // ── Format helpers ─────────────────────────────────────────────────────────
 function fmt(n)        { return n%1===0?n:n.toFixed(1); }
@@ -616,7 +736,7 @@ function rStats() {
         <div class="hdr-sub">${t('sub')}</div>
         <div class="hdr-title">${t('stats')}</div>
       </div>
-      <div style="width:40px"></div>
+      <button class="ibtn" title="${t('exportYear')}" onclick="exportYearCSV()">⬇</button>
     </div>
     <div class="mnav">
       <button class="ibtn" onclick="goYear(-1)">‹</button>
@@ -676,6 +796,18 @@ function rSettings() {
       <div class="scard">
         <div class="clbl">${t('language')}</div>
         <div class="curlist">${llist}</div>
+      </div>
+      <div class="scard">
+        <div class="clbl">${t('calendarSync')}</div>
+        <div class="mtoggle">
+          <button class="mbtn${!d.calSync?' on':''}" onclick="toggleCalSync(false)">${t('off')}</button>
+          <button class="mbtn${d.calSync?' on':''}" onclick="toggleCalSync(true)">${t('on')}</button>
+        </div>
+        ${!S.user?`<div style="color:#5E7A94;font-size:12px;margin-top:9px">${t('calendarNeedsSignIn')}</div>`:''}
+      </div>
+      <div class="scard">
+        <div class="clbl">${t('exportData')}</div>
+        <button class="svbtn" style="background:#141E30;border:1px solid #1E304A" onclick="exportBackupJSON()">${t('exportBackup')}</button>
       </div>
       <button class="svbtn" onclick="saveCfg()">${t('save')}</button>
     </div>
@@ -837,12 +969,40 @@ function setP(h)       {
   document.querySelectorAll('.pre').forEach(b=>b.classList.toggle('on',+b.textContent===h));
   updPrev();
 }
-function clearDay()    { delEnt(S.modal.day); S.modal=null; render(); }
+function addH(hhmm, hrs) {
+  const [h,m]=hhmm.split(':').map(Number);
+  let total=h*60+m+Math.round(hrs*60);
+  total=((total%1440)+1440)%1440;
+  return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+}
+function syncToCalendar(day,h,from,to) {
+  if (!(S.cfg.calSync && S.user && window.__fb)) return;
+  if (!S.calIds[S.mo]) S.calIds[S.mo]={};
+  const calId=S.calIds[S.mo][day];
+  if (h<=0) {
+    if (calId) { window.__fb.deleteCalendarEvent(calId); delete S.calIds[S.mo][day]; save(); }
+    return;
+  }
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const title=`${t('calTitle')} · ${fmt(h)}${L().hShort}`;
+  const notes=`${t('earnings')}: ${fmt(h*S.cfg.rate)} ${sym}`;
+  window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId})
+    .then(id=>{ if(id){ S.calIds[S.mo][day]=id; save(); } });
+}
+function clearDay()    {
+  const day=S.modal.day, calId=S.calIds[S.mo]&&S.calIds[S.mo][day];
+  delEnt(day);
+  if (calId && S.cfg.calSync && window.__fb) window.__fb.deleteCalendarEvent(calId);
+  S.modal=null; render();
+}
 function saveDay()     {
   const m=S.modal;
   const raw=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
   const h=Math.min(Math.max(raw,0), 24);
+  const from=m.mode==='r'?m.from:'09:00';
+  const to  =m.mode==='r'?m.to  :addH(from,h);
   setEnt(m.day, Math.round(h*100)/100);
+  syncToCalendar(m.day,h,from,to);
   S.modal=null; render();
 }
 
@@ -858,12 +1018,49 @@ function setLang(l)     {
   save();
   render();
 }
+async function toggleCalSync(on) {
+  if (on) {
+    const ok = window.__fb ? await window.__fb.ensureCalendarAccess() : false;
+    if (!ok) on = false; // user closed the consent popup or it failed — stay off
+  }
+  S.cfg.calSync = on;
+  if (S.dcfg) S.dcfg.calSync = on;
+  save();
+  render();
+}
 
 // Stats actions
 function openStats()       { S.view='stats'; render(); }
 function goYear(d)         { S.yearKey+=d; render(); }
 function barClick(i)       { S.mo=`${S.yearKey}-${p2(i+1)}`; S.view='main'; render(); }
 function jumpToMonth(mk)   { S.mo=mk; S.view='main'; render(); }
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function downloadFile(name, content, mime) {
+  const blob=new Blob([content],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+function exportYearCSV() {
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const yd=getYearData(S.yearKey);
+  const rows=[[t('month'),t('days'),t('hours'),`${t('earnings')} (${sym})`]];
+  yd.forEach(d=>{
+    const mn=new Date(+d.mk.split('-')[0],+d.mk.split('-')[1]-1,1).toLocaleDateString(loc(),{month:'long'});
+    rows.push([mn, d.days, fmt(d.hours), d.earnings.toFixed(2)]);
+  });
+  const totD=yd.reduce((a,d)=>a+d.days,0), totH=yd.reduce((a,d)=>a+d.hours,0);
+  rows.push([t('total'), totD, fmt(totH), (totH*S.cfg.rate).toFixed(2)]);
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  downloadFile(`work-hours-${S.yearKey}.csv`, '\uFEFF'+csv, 'text/csv;charset=utf-8');
+}
+function exportBackupJSON() {
+  const payload={exportedAt:new Date().toISOString(), cfg:S.cfg, data:S.data};
+  downloadFile(`work-hours-backup-${moKey()}.json`, JSON.stringify(payload,null,2), 'application/json');
+}
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 load();
