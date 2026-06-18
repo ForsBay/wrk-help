@@ -303,7 +303,7 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 const googleProvider = new GoogleAuthProvider();
-const calendarScope = 'https://www.googleapis.com/auth/calendar.events';
+const calendarScope = 'https://www.googleapis.com/auth/calendar.events.owned';
 function createGoogleProvider(addCalendarScope=false) {
   const p = new GoogleAuthProvider();
   if (addCalendarScope) p.addScope(calendarScope);
@@ -547,7 +547,7 @@ const I18N = {
     calendarNeedsSignIn:'Sign in with Google first', calTitle:'Work',
     calendarAuthFailed:'Calendar access was blocked. Add this Google account as an OAuth test user or publish and verify the app in Google Cloud.',
     exportData:'Export data', exportYear:'Export year (CSV)', exportBackup:'Full backup (JSON)',
-    overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Rate multiplier',
+    overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Extra rate (%)',
     additionalOpts:'Additional options',theme:'Theme',themeDark:'Dark',themeLight:'Light',
     dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     cur:{PLN:'Polish Zloty',RUB:'Russian Ruble',USD:'US Dollar',EUR:'Euro',GBP:'British Pound'}
@@ -565,7 +565,7 @@ const I18N = {
     calendarSync:'Синхронизация с календарём', on:'Вкл', off:'Выкл',
     calendarNeedsSignIn:'Сначала войдите через Google', calTitle:'Работа',
     exportData:'Экспорт данных', exportYear:'Экспорт года (CSV)', exportBackup:'Полный бэкап (JSON)',
-    overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Коэффициент',
+    overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Доп. ставка (%)',
     additionalOpts:'Дополнительные опции',theme:'Тема',themeDark:'Тёмная',themeLight:'Светлая',
     dow:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
     cur:{PLN:'Злотый',RUB:'Рубль',USD:'Доллар',EUR:'Евро',GBP:'Фунт'}
@@ -583,7 +583,7 @@ const I18N = {
     calendarSync:'Synchronizacja z kalendarzem', on:'Wł', off:'Wył',
     calendarNeedsSignIn:'Najpierw zaloguj się przez Google', calTitle:'Praca',
     exportData:'Eksport danych', exportYear:'Eksport roku (CSV)', exportBackup:'Pełny backup (JSON)',
-    overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Mnożnik',
+    overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Stawka extra (%)',
     additionalOpts:'Dodatkowe opcje',theme:'Motyw',themeDark:'Ciemny',themeLight:'Jasny',
     dow:['Pon','Wt','Śr','Czw','Pt','Sob','Nd'],
     cur:{PLN:'Złoty',RUB:'Rubel',USD:'Dolar',EUR:'Euro',GBP:'Funt'}
@@ -603,6 +603,7 @@ function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g,
   c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 const SK = 'wh_v2';
+const DEFAULT_OT_PCT = 150;
 
 // ── State ──────────────────────────────────────────────────────────────────
 let S = {
@@ -610,7 +611,7 @@ let S = {
   cfg:     { rate:25, cur:'PLN', lang:'en', calSync:false, theme:'dark' },
   mo:      moKey(),
   data:    {},       // { 'YYYY-MM': { day: hours } }
-  ot:      {},       // { 'YYYY-MM': { day: { h: overtime_hours, mult: rate_multiplier } } }
+  ot:      {},       // { 'YYYY-MM': { day: { h: overtime_hours, pct: overtime_rate_percent } } }
   calIds:  {},       // { 'YYYY-MM': { day: googleCalendarEventId } } — local only
   modal:   null,
   dcfg:    null,
@@ -734,6 +735,12 @@ function delEnt(d)     {
 function fmt(n)        { return n%1===0?n:n.toFixed(1); }
 function fmtBig(e)     { return e>=10000?`${(e/1000).toFixed(1)}k`:Math.round(e); }
 function fmtCell(e)    { return e>=1000?`${(e/1000).toFixed(1)}k`:Math.round(e); }
+function otPct(o) {
+  if (o && o.pct !== undefined) return Math.min(Math.max(parseFloat(o.pct)||0, 0), 1000);
+  if (o && o.mult !== undefined) return Math.min(Math.max((parseFloat(o.mult)||0) * 100, 0), 1000);
+  return DEFAULT_OT_PCT;
+}
+function otEarn(o) { return o ? (parseFloat(o.h)||0) * (otPct(o)/100) * S.cfg.rate : 0; }
 
 // ── MAIN VIEW ──────────────────────────────────────────────────────────────
 function rMain() {
@@ -754,8 +761,7 @@ function rMain() {
     const h=e[d], has=h!==undefined;
     const today=isToday(S.mo,d), fut=isFuture(S.mo,d), wk=isWknd(S.mo,d);
     const otDay=otMo[d];
-    const otEarn=otDay?otDay.h*otDay.mult*S.cfg.rate:0;
-    const earned=has?(h*S.cfg.rate+otEarn):0;
+    const earned=has?(h*S.cfg.rate+otEarn(otDay)):0;
     return `<button class="dc${has?' active':''}${today?' today':''}${wk?' wknd':''}${fut?' future':''}"
       onclick="openDay(${d})">
       <span class="dn">${d}</span>
@@ -768,7 +774,7 @@ function rMain() {
   }).join('');
 
   const th=Object.values(e).reduce((a,h)=>a+h,0);
-  const ote=Object.values(otMo).reduce((a,o)=>a+o.h*o.mult*S.cfg.rate,0);
+  const ote=Object.values(otMo).reduce((a,o)=>a+otEarn(o),0);
   const te=th*S.cfg.rate+ote;
   const wd=Object.keys(e).length;
 
@@ -810,7 +816,7 @@ function getYearData(year) {
     const e=S.data[mk]||{};
     const h=Object.values(e).reduce((a,v)=>a+v,0);
     const otMo=S.ot[mk]||{};
-    const ote=Object.values(otMo).reduce((a,o)=>a+o.h*o.mult*S.cfg.rate,0);
+    const ote=Object.values(otMo).reduce((a,o)=>a+otEarn(o),0);
     return { mk, days:Object.keys(e).length, hours:h, earnings:h*S.cfg.rate+ote };
   });
 }
@@ -819,7 +825,7 @@ function rStats() {
   const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
   const yd=getYearData(S.yearKey);
   const totH=yd.reduce((a,d)=>a+d.hours,0);
-  const totE=totH*S.cfg.rate;
+  const totE=yd.reduce((a,d)=>a+d.earnings,0);
   const totD=yd.reduce((a,d)=>a+d.days,0);
 
   // ── SVG bar chart ──
@@ -967,14 +973,14 @@ function rModal() {
   const ph=isH?(parseFloat(m.h)||0):calcRange(m.from,m.to);
   const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
   const otH=otData?otData.h:0;
-  const otMult=otData?otData.mult:1.5;
-  const pe=ph*S.cfg.rate + otH*otMult*S.cfg.rate;
+  const otRate=otPct(otData);
+  const pe=ph*S.cfg.rate + otEarn(otData);
   const prev=(ph>0||otH>0)
     ?`<div class="prev">${ph}${L().hShort}${otH>0?` +${otH}OT`:''} = ${pe.toFixed(0)} ${sym}</div>`:'';
   const psets=[4,5,6,7,8].map(h=>
     `<button class="pre${m.h===String(h)?' on':''}" onclick="setP(${h})">${h}</button>`).join('');
-  const multOpts=[1.25,1.5,2].map(v=>
-    `<button class="mult-btn${otMult===v?' on':''}" onclick="setOTMult(${v})">${v}×</button>`).join('');
+  const multOpts=[125,150,200].map(v=>
+    `<button class="mult-btn${otRate===v?' on':''}" onclick="setOTPct(${v})">${v}%</button>`).join('');
 
   return `<div class="overlay" onclick="ovClick(event)">
     <div class="sheet${m.extraOpen?' expanded':''}" id="daySheet">
@@ -1026,7 +1032,12 @@ function rModal() {
           </div>
           <div class="extra-clbl">${t('overtimeMult')}</div>
           <div class="mult-row">${multOpts}</div>
-          ${otH>0?`<div class="ot-prev">+${otH}${L().hShort} × ${otMult} = ${(otH*otMult*S.cfg.rate).toFixed(0)} ${sym}</div>`:''}
+          <div class="ot-row">
+            <input type="number" id="otpct" class="ot-inp" value="${otRate||''}" placeholder="${DEFAULT_OT_PCT}"
+              min="0" max="1000" step="5" oninput="setOTPct(this.value)">
+            <span class="ot-lbl">%</span>
+          </div>
+          ${otH>0?`<div class="ot-prev">+${otH}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}</div>`:''}
         </div>
       </div>
     </div>
@@ -1128,8 +1139,7 @@ function updPrev() {
   const ph=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
   const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
   const otH=otData?otData.h:0;
-  const otMult=otData?otData.mult:1.5;
-  const pe=ph*S.cfg.rate + otH*otMult*S.cfg.rate;
+  const pe=ph*S.cfg.rate + otEarn(otData);
   let el=document.querySelector('.prev');
   if (ph>0||otH>0) {
     if (!el){ el=document.createElement('div'); el.className='prev'; document.querySelector('.mactions').before(el); }
@@ -1142,32 +1152,36 @@ function setOT(v) {
   const m=S.modal;
   const h=Math.min(parseFloat(v)||0, 24);
   if (!S.ot[S.mo]) S.ot[S.mo]={};
-  const ex=S.ot[S.mo][m.day]||{h:0,mult:1.5};
+  const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT};
   S.ot[S.mo][m.day]={...ex,h};
   updOTPrev();
 }
-function setOTMult(v) {
+function setOTPct(v) {
   const m=S.modal;
+  const pct=Math.min(Math.max(parseFloat(v)||0, 0), 1000);
   if (!S.ot[S.mo]) S.ot[S.mo]={};
-  const ex=S.ot[S.mo][m.day]||{h:0,mult:1.5};
-  S.ot[S.mo][m.day]={...ex,mult:v};
+  const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT};
+  S.ot[S.mo][m.day]={...ex,pct};
   document.querySelectorAll('.mult-btn').forEach(b=>
-    b.classList.toggle('on',parseFloat(b.textContent)===v));
+    b.classList.toggle('on',parseFloat(b.textContent)===pct));
+  const pctInp=document.getElementById('otpct');
+  if (pctInp && pctInp.value !== String(pct)) pctInp.value=String(pct);
   updOTPrev();
 }
 function updOTPrev() {
   const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
   const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
   const otH=otData?otData.h:0;
-  const otMult=otData?otData.mult:1.5;
+  const otRate=otPct(otData);
   let el=document.querySelector('.ot-prev');
   if (otH>0) {
     if (!el){
       el=document.createElement('div'); el.className='ot-prev';
-      const mr=document.querySelector('.mult-row');
-      if (mr) mr.after(el);
+      const pctInp=document.getElementById('otpct');
+      const anchor=pctInp ? pctInp.closest('.ot-row') : document.querySelector('.mult-row');
+      if (anchor) anchor.after(el);
     }
-    el.textContent=`+${otH}${L().hShort} × ${otMult} = ${(otH*otMult*S.cfg.rate).toFixed(0)} ${sym}`;
+    el.textContent=`+${otH}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
   } else if (el) el.remove();
   updPrev();
 }
@@ -1284,8 +1298,8 @@ function saveDay()     {
   if (!S.ot[S.mo]) S.ot[S.mo]={};
   const otData=S.ot[S.mo][m.day];
   const otH=otData?otData.h:0;
-  const otMult=otData?otData.mult:1.5;
-  if (otH>0) S.ot[S.mo][m.day]={h:otH,mult:otMult};
+  const otRate=otPct(otData);
+  if (otH>0) S.ot[S.mo][m.day]={h:otH,pct:otRate};
   else if (S.ot[S.mo][m.day]) delete S.ot[S.mo][m.day];
   syncToCalendar(m.day,h,from,to);
   S.modal=null; render();
@@ -1348,13 +1362,13 @@ function exportYearCSV() {
     const mn=new Date(+d.mk.split('-')[0],+d.mk.split('-')[1]-1,1).toLocaleDateString(loc(),{month:'long'});
     rows.push([mn, d.days, fmt(d.hours), d.earnings.toFixed(2)]);
   });
-  const totD=yd.reduce((a,d)=>a+d.days,0), totH=yd.reduce((a,d)=>a+d.hours,0);
-  rows.push([t('total'), totD, fmt(totH), (totH*S.cfg.rate).toFixed(2)]);
+  const totD=yd.reduce((a,d)=>a+d.days,0), totH=yd.reduce((a,d)=>a+d.hours,0), totE=yd.reduce((a,d)=>a+d.earnings,0);
+  rows.push([t('total'), totD, fmt(totH), totE.toFixed(2)]);
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   downloadFile(`work-hours-${S.yearKey}.csv`, '\uFEFF'+csv, 'text/csv;charset=utf-8');
 }
 function exportBackupJSON() {
-  const payload={exportedAt:new Date().toISOString(), cfg:S.cfg, data:S.data};
+  const payload={exportedAt:new Date().toISOString(), cfg:S.cfg, data:S.data, ot:S.ot};
   downloadFile(`work-hours-backup-${moKey()}.json`, JSON.stringify(payload,null,2), 'application/json');
 }
 
