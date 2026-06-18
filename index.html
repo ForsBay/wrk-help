@@ -317,6 +317,10 @@ let pendingDeletes = {};  // { 'YYYY-MM': Set(['5','12']) } days removed since l
 let calToken    = null;   // Google OAuth access token (Calendar scope), session-only
 let calExp      = 0;      // ms timestamp when calToken expires
 
+function setCalendarError(code) {
+  if (window.__app && window.__app.setCalendarError) window.__app.setCalendarError(code || null);
+}
+
 // ── Sign in (popup, with redirect fallback for installed PWAs) ──────────────
 async function signIn() {
   try {
@@ -342,12 +346,14 @@ function saveCalToken(result) {
     if (cred && cred.accessToken) {
       calToken = cred.accessToken;
       calExp = Date.now() + 55 * 60 * 1000; // Google tokens last ~60min, refresh a bit early
+      setCalendarError(null);
     }
   } catch (_) {}
 }
 
 // Re-prompt Google consent to get a fresh Calendar access token (popup, user-gesture only)
 async function ensureCalendarAccess() {
+  setCalendarError(null);
   if (calToken && Date.now() < calExp) return true;
   try {
     const result = await signInWithPopup(auth, createGoogleProvider(true));
@@ -355,6 +361,7 @@ async function ensureCalendarAccess() {
     return !!calToken;
   } catch (e) {
     console.error('Calendar consent failed:', e);
+    setCalendarError(e.code || 'calendarAuthFailed');
     return false;
   }
 }
@@ -427,6 +434,7 @@ async function calFetch(url, opts) {
   });
   if (res.status === 401) { calToken = null; calExp = 0; return null; } // stale token
   if (res.status === 204) return {};
+  if (!res.ok) setCalendarError(`calendarApi:${res.status}`);
   return res.ok ? res.json() : null;
 }
 
@@ -537,6 +545,7 @@ const I18N = {
     yearSuffix:'',
     calendarSync:'Calendar sync', on:'On', off:'Off',
     calendarNeedsSignIn:'Sign in with Google first', calTitle:'Work',
+    calendarAuthFailed:'Calendar access was blocked. Add this Google account as an OAuth test user or publish and verify the app in Google Cloud.',
     exportData:'Export data', exportYear:'Export year (CSV)', exportBackup:'Full backup (JSON)',
     overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Rate multiplier',
     additionalOpts:'Additional options',theme:'Theme',themeDark:'Dark',themeLight:'Light',
@@ -582,6 +591,13 @@ const I18N = {
 };
 function L()    { return I18N[S.cfg.lang] || I18N.en; }
 function t(k)   { return L()[k]; }
+function calendarErrorText() {
+  if (!S.calError) return '';
+  if (String(S.calError).startsWith('calendarApi:')) {
+    return `Google Calendar API error ${String(S.calError).split(':')[1]}. Check OAuth consent, Calendar API, and API restrictions in Google Cloud.`;
+  }
+  return L().calendarAuthFailed || I18N.en.calendarAuthFailed;
+}
 function loc()  { return LOCALE[S.cfg.lang] || 'en-US'; }
 function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g,
   c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -603,6 +619,7 @@ let S = {
   user:    null,     // { uid, name, email, photo }
   profile: false,    // profile sheet open?
   sync:    'off',    // off | idle | busy
+  calError: null,
   termsAccepted: false,
 };
 let applyingRemote = false; // guard so cloud-applied changes don't bounce back
@@ -643,6 +660,10 @@ window.__app = {
   setSync(s) {
     S.sync = s;
     if (S.profile) render();   // only the profile sheet shows sync state
+  },
+  setCalendarError(code) {
+    S.calError = code;
+    if (S.view === 'settings') render();
   },
   getState() { return { cfg:S.cfg, data:S.data }; },
   // Union-merge remote data into local. Cloud value wins on a conflicting day.
@@ -920,6 +941,7 @@ function rSettings() {
           <button class="mbtn${d.calSync?' on':''}" onclick="toggleCalSync(true)">${t('on')}</button>
         </div>
         ${!S.user?`<div style="color:#5E7A94;font-size:12px;margin-top:9px">${t('calendarNeedsSignIn')}</div>`:''}
+        ${S.calError?`<div style="color:#E07A5F;font-size:12px;line-height:1.35;margin-top:9px">${esc(calendarErrorText())}</div>`:''}
       </div>
       <div class="scard">
         <div class="clbl">${t('exportData')}</div>
@@ -1220,18 +1242,29 @@ function addH(hhmm, hrs) {
   return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
 }
 function syncToCalendar(day,h,from,to) {
-  if (!(S.cfg.calSync && S.user && window.__fb)) return;
+  if (!(S.cfg.calSync && S.user && window.__fb)) return Promise.resolve(null);
   if (!S.calIds[S.mo]) S.calIds[S.mo]={};
   const calId=S.calIds[S.mo][day];
   if (h<=0) {
     if (calId) { window.__fb.deleteCalendarEvent(calId); delete S.calIds[S.mo][day]; save(); }
-    return;
+    return Promise.resolve(null);
   }
   const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
   const title=`${t('calTitle')} · ${fmt(h)}${L().hShort}`;
   const notes=`${t('earnings')}: ${fmt(h*S.cfg.rate)} ${sym}`;
-  window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId})
+  return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId})
     .then(id=>{ if(id){ S.calIds[S.mo][day]=id; save(); } });
+}
+async function syncMonthToCalendar() {
+  const e=S.data[S.mo]||{};
+  const jobs=Object.entries(e)
+    .filter(([,h]) => Number(h)>0)
+    .map(([day,h]) => {
+      const hours=Number(h);
+      const from='09:00';
+      return syncToCalendar(Number(day),hours,from,addH(from,hours));
+    });
+  await Promise.all(jobs);
 }
 function clearDay()    {
   const day=S.modal.day, calId=S.calIds[S.mo]&&S.calIds[S.mo][day];
@@ -1280,6 +1313,7 @@ function setLang(l)     {
   render();
 }
 async function toggleCalSync(on) {
+  S.calError = null;
   if (on) {
     const ok = window.__fb ? await window.__fb.ensureCalendarAccess() : false;
     if (!ok) on = false; // user closed the consent popup or it failed — stay off
@@ -1287,6 +1321,7 @@ async function toggleCalSync(on) {
   S.cfg.calSync = on;
   if (S.dcfg) S.dcfg.calSync = on;
   save();
+  if (on) await syncMonthToCalendar();
   render();
 }
 
