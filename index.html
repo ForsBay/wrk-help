@@ -302,9 +302,13 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
-const provider = new GoogleAuthProvider();
-// extra scope so we can write events into the user's Google Calendar
-provider.addScope('https://www.googleapis.com/auth/calendar.events');
+const googleProvider = new GoogleAuthProvider();
+const calendarScope = 'https://www.googleapis.com/auth/calendar.events';
+function createGoogleProvider(addCalendarScope=false) {
+  const p = new GoogleAuthProvider();
+  if (addCalendarScope) p.addScope(calendarScope);
+  return p;
+}
 
 let currentUser = null;   // raw Firebase user
 let unsub       = null;   // Firestore snapshot unsubscribe
@@ -316,7 +320,7 @@ let calExp      = 0;      // ms timestamp when calToken expires
 // ── Sign in (popup, with redirect fallback for installed PWAs) ──────────────
 async function signIn() {
   try {
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, createGoogleProvider(false));
     saveCalToken(result);
   } catch (e) {
     const fallback = [
@@ -325,7 +329,7 @@ async function signIn() {
       'auth/cancelled-popup-request'
     ];
     if (fallback.includes(e.code)) {
-      try { await signInWithRedirect(auth, provider); } catch (_) {}
+      try { await signInWithRedirect(auth, createGoogleProvider(false)); } catch (_) {}
     } else if (e.code !== 'auth/popup-closed-by-user') {
       console.error('Sign-in error:', e);
     }
@@ -346,7 +350,7 @@ function saveCalToken(result) {
 async function ensureCalendarAccess() {
   if (calToken && Date.now() < calExp) return true;
   try {
-    const result = await signInWithPopup(auth, provider);
+    const result = await signInWithPopup(auth, createGoogleProvider(true));
     saveCalToken(result);
     return !!calToken;
   } catch (e) {
@@ -599,6 +603,7 @@ let S = {
   user:    null,     // { uid, name, email, photo }
   profile: false,    // profile sheet open?
   sync:    'off',    // off | idle | busy
+  termsAccepted: false,
 };
 let applyingRemote = false; // guard so cloud-applied changes don't bounce back
 
@@ -610,11 +615,19 @@ function load() {
     if (d.data)   S.data   = d.data;
     if (d.calIds) S.calIds = d.calIds;
     if (d.ot)     S.ot     = d.ot;
+    if (d.termsAccepted) S.termsAccepted = true;
   } catch(e) {}
 }
 function save() {
-  try { localStorage.setItem(SK, JSON.stringify({cfg:S.cfg, data:S.data, calIds:S.calIds, ot:S.ot})); }
-  catch(e) {}
+  try {
+    localStorage.setItem(SK, JSON.stringify({
+      cfg: S.cfg,
+      data: S.data,
+      calIds: S.calIds,
+      ot: S.ot,
+      termsAccepted: S.termsAccepted
+    }));
+  } catch(e) {}
   if (!applyingRemote && window.__fb && S.user) {
     window.__fb.push({ cfg:S.cfg, data:S.data, ot:S.ot });
   }
@@ -912,6 +925,13 @@ function rSettings() {
         <div class="clbl">${t('exportData')}</div>
         <button class="svbtn" style="background:#141E30;border:1px solid #1E304A" onclick="exportBackupJSON()">${t('exportBackup')}</button>
       </div>
+      <div class="scard">
+        <div class="clbl">Legal</div>
+        <div class="curlist">
+          <button class="copt" onclick="openLegal('terms')">Terms of Use</button>
+          <button class="copt" onclick="openLegal('privacy')">Privacy Policy</button>
+        </div>
+      </div>
       <button class="svbtn" onclick="saveCfg()">${t('save')}</button>
     </div>
   </div>`;
@@ -999,6 +1019,11 @@ function render() {
   const mc=document.querySelector('meta[name="theme-color"]');
   if (mc) mc.content = effectiveTheme==='light' ? '#F0F4FA' : '#0B1220';
   let html;
+  if (!S.termsAccepted) {
+    html = rTermsModal();
+    document.getElementById('app').innerHTML = html;
+    return;
+  }
   if      (S.view==='settings') html=rSettings();
   else if (S.view==='stats')    html=rStats();
   else                          html=rMain();
@@ -1013,6 +1038,20 @@ function render() {
 }
 
 // ── PROFILE SHEET ──────────────────────────────────────────────────────────
+function rTermsModal() {
+  const text = `By using this app, you agree to the Terms of Use and Privacy Policy.`;
+  return `<div class="overlay" onclick="void(0)">
+    <div class="sheet" style="padding:24px 20px 30px">
+      <div class="drag"></div>
+      <h2 style="font-size:22px;margin-bottom:12px">User agreement</h2>
+      <p style="color:#B8C8D8;font-size:15px;line-height:1.8;margin-bottom:16px">${text}</p>
+      <button class="svbtn" style="width:100%;margin-bottom:10px" onclick="openLegal('terms')">Read Terms of Use</button>
+      <button class="svbtn" style="width:100%;margin-bottom:18px;background:#141E30;border:1px solid #1E304A" onclick="openLegal('privacy')">Read Privacy Policy</button>
+      <button class="svbtn" onclick="acceptTerms()">I agree and continue</button>
+    </div>
+  </div>`;
+}
+
 function rProfile() {
   const u=S.user;
   const seg=LANGS.map(l=>
@@ -1224,6 +1263,15 @@ function openProfile()  { S.profile=true;  render(); }
 function ovProfile(e)   { if(e.target.classList.contains('overlay')){ S.profile=false; render(); } }
 function doSignIn()     { if(window.__fb) window.__fb.signIn(); }
 function doSignOut()    { S.profile=false; if(window.__fb) window.__fb.signOut(); render(); }
+function acceptTerms()  { S.termsAccepted = true; save(); render(); }
+function openLegal(type) {
+  const pages = {
+    terms: './terms.html',
+    privacy: './privacy.html'
+  };
+  const url = pages[type] || pages.terms;
+  window.open(url, '_blank', 'noopener');
+}
 function setLang(l)     {
   if(!LANGS.includes(l)) return;
   S.cfg.lang=l;
