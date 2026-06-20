@@ -424,6 +424,15 @@ function addHoursToTime(hhmm, hours) {
   const eh = Math.floor(total / 60), em = total % 60;
   return `${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`;
 }
+function timeMinutes(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+function nextDateStr(ymd) {
+  const [y,m,d] = ymd.split('-').map(Number);
+  const nd = new Date(y, m - 1, d + 1);
+  return `${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+}
 
 async function calFetch(url, opts) {
   const ok = await ensureCalendarAccess();
@@ -438,15 +447,17 @@ async function calFetch(url, opts) {
   return res.ok ? res.json() : null;
 }
 
-async function upsertCalendarEvent({ mo, day, from, to, title, notes, calId }) {
+async function upsertCalendarEvent({ mo, day, from, to, title, notes, calId, colorId }) {
   const date = `${mo}-${String(day).padStart(2,'0')}`;
+  const endDate = timeMinutes(to) <= timeMinutes(from) ? nextDateStr(date) : date;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const body = {
     summary: title,
     description: notes,
     start: { dateTime: `${date}T${from}:00`, timeZone: tz },
-    end:   { dateTime: `${date}T${to}:00`,   timeZone: tz }
+    end:   { dateTime: `${endDate}T${to}:00`, timeZone: tz }
   };
+  if (colorId) body.colorId = String(colorId);
   try {
     const data = calId
       ? await calFetch(`${CAL_API}/${calId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
@@ -740,7 +751,18 @@ function otPct(o) {
   if (o && o.mult !== undefined) return Math.min(Math.max((parseFloat(o.mult)||0) * 100, 0), 1000);
   return DEFAULT_OT_PCT;
 }
-function otEarn(o) { return o ? (parseFloat(o.h)||0) * (otPct(o)/100) * S.cfg.rate : 0; }
+function otHours(o) {
+  if (!o) return 0;
+  if (o.from && o.to) return calcRange(o.from, o.to);
+  return Math.min(parseFloat(o.h)||0, 24);
+}
+function otEnd(o) {
+  if (!o) return '';
+  if (o.to) return o.to;
+  if (o.from && o.h) return addH(o.from, parseFloat(o.h)||0);
+  return '';
+}
+function otEarn(o) { return o ? otHours(o) * (otPct(o)/100) * S.cfg.rate : 0; }
 
 // ── MAIN VIEW ──────────────────────────────────────────────────────────────
 function rMain() {
@@ -761,12 +783,13 @@ function rMain() {
     const h=e[d], has=h!==undefined;
     const today=isToday(S.mo,d), fut=isFuture(S.mo,d), wk=isWknd(S.mo,d);
     const otDay=otMo[d];
+    const otH=otHours(otDay);
     const earned=has?(h*S.cfg.rate+otEarn(otDay)):0;
     return `<button class="dc${has?' active':''}${today?' today':''}${wk?' wknd':''}${fut?' future':''}"
       onclick="openDay(${d})">
       <span class="dn">${d}</span>
       ${has
-        ? `<span class="dh">${h}${hs}${otDay&&otDay.h>0?`<span style="color:#F5A623;font-size:9px"> +${otDay.h}</span>`:''}</span>
+        ? `<span class="dh">${h}${hs}${otH>0?`<span style="color:#F5A623;font-size:9px"> +${otH}</span>`:''}</span>
            ${h>0?`<span class="de">${fmtCell(earned)}${sym}</span>`:''}
            ${fut?`<span class="dplan">${t('planBadge')}</span>`:''}`
         : '<span class="dp">+</span>'}
@@ -972,11 +995,12 @@ function rModal() {
   const fut=isFuture(S.mo,m.day);
   const ph=isH?(parseFloat(m.h)||0):calcRange(m.from,m.to);
   const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
-  const otH=otData?otData.h:0;
+  const otH=otHours(otData);
   const otRate=otPct(otData);
   const pe=ph*S.cfg.rate + otEarn(otData);
   const workEnd=isH?addH(m.from||'09:00',ph):(m.to||'17:00');
   const otFrom=(otData&&otData.from)||workEnd;
+  const otTo=otEnd(otData)||addH(otFrom,otH);
   const prev=(ph>0||otH>0)
     ?`<div class="prev">${ph}${L().hShort}${otH>0?` +${otH}OT`:''} = ${pe.toFixed(0)} ${sym}</div>`:'';
   const psets=[4,5,6,7,8].map(h=>
@@ -1027,16 +1051,16 @@ function rModal() {
       <div class="extra-panel" id="extraPanel">
         <div class="extra-section">
           <div class="extra-clbl">${t('overtime')}</div>
-          <div class="ot-row">
-            <input type="number" class="ot-inp" value="${otH||''}" placeholder="0"
-              min="0" max="24" step="0.5" oninput="setOT(this.value)">
-            <span class="ot-lbl">${L().hShort} OT</span>
-          </div>
-          <div class="extra-clbl">${t('overtimeFrom')}</div>
-          <div class="ot-row">
-            <input type="time" id="otFromInp" class="tmin" style="flex:1;width:auto"
-              value="${otFrom}" oninput="setOTFrom(this.value)">
-            <span class="ot-lbl" id="otEndTime">${otH>0?`→ ${addH(otFrom,otH)}`:''}</span>
+          <div class="rrow">
+            <div class="rfield">
+              <div class="rlbl">${t('from')}</div>
+              <input type="time" id="otFromInp" class="tmin" value="${otFrom}" oninput="setOTFrom(this.value)">
+            </div>
+            <div class="rdash">вЂ”</div>
+            <div class="rfield">
+              <div class="rlbl">${t('to')}</div>
+              <input type="time" id="otToInp" class="tmin" value="${otTo}" oninput="setOTTo(this.value)">
+            </div>
           </div>
           <div class="extra-clbl">${t('overtimeMult')}</div>
           <div class="mult-row">${multOpts}</div>
@@ -1045,7 +1069,7 @@ function rModal() {
               min="0" max="1000" step="5" oninput="setOTPct(this.value)">
             <span class="ot-lbl">%</span>
           </div>
-          ${otH>0?`<div class="ot-prev">+${otH}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}</div>`:''}
+          ${otH>0?`<div class="ot-prev">+${otH}${L().hShort} (${otFrom}-${otTo}) x ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}</div>`:''}
         </div>
       </div>
     </div>
@@ -1146,7 +1170,7 @@ function updPrev() {
   const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
   const ph=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
   const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
-  const otH=otData?otData.h:0;
+  const otH=otHours(otData);
   const pe=ph*S.cfg.rate + otEarn(otData);
   let el=document.querySelector('.prev');
   if (ph>0||otH>0) {
@@ -1180,17 +1204,25 @@ function setOTFrom(v) {
   const m=S.modal;
   if (!S.ot[S.mo]) S.ot[S.mo]={};
   const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT};
-  S.ot[S.mo][m.day]={...ex,from:v};
+  const to=(document.getElementById('otToInp')?.value)||ex.to||addH(v, parseFloat(ex.h)||0);
+  S.ot[S.mo][m.day]={...ex,from:v,to,h:calcRange(v,to)};
+  updOTPrev();
+}
+function setOTTo(v) {
+  const m=S.modal;
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT,from:''};
+  const from=ex.from||(document.getElementById('otFromInp')?.value)||v;
+  S.ot[S.mo][m.day]={...ex,from,to:v,h:calcRange(from,v)};
   updOTPrev();
 }
 function updOTPrev() {
   const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
   const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
-  const otH=otData?otData.h:0;
+  const otH=otHours(otData);
   const otRate=otPct(otData);
   const otFrom=(otData&&otData.from)||'';
-  const endEl=document.getElementById('otEndTime');
-  if (endEl) endEl.textContent=(otH>0&&otFrom)?`→ ${addH(otFrom,otH)}`:'';
+  const otTo=otEnd(otData);
   let el=document.querySelector('.ot-prev');
   if (otH>0) {
     if (!el){
@@ -1199,8 +1231,8 @@ function updOTPrev() {
       const anchor=pctInp ? pctInp.closest('.ot-row') : document.querySelector('.mult-row');
       if (anchor) anchor.after(el);
     }
-    const timeRange=otFrom?` (${otFrom}–${addH(otFrom,otH)})`:'';
-    el.textContent=`+${otH}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}${timeRange}`;
+    const timeRange=(otFrom&&otTo)?` (${otFrom}-${otTo})`:'';
+    el.textContent=`+${otH}${L().hShort}${timeRange} x ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
   } else if (el) el.remove();
   updPrev();
 }
@@ -1285,7 +1317,7 @@ function syncToCalendar(day,h,from,to) {
   const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
   const title=`${t('calTitle')} · ${fmt(h)}${L().hShort}`;
   const notes=`${t('earnings')}: ${fmt(h*S.cfg.rate)} ${sym}`;
-  return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId})
+  return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId,colorId:'9'})
     .then(id=>{ if(id){ S.calIds[S.mo][day]=id; save(); } });
 }
 function syncOTToCalendar(day, h, from, to) {
@@ -1302,22 +1334,24 @@ function syncOTToCalendar(day, h, from, to) {
   const otRate=otPct(otData);
   const title=`${t('calTitle')} OT · ${fmt(h)}${L().hShort}`;
   const notes=`${t('overtime')}: ${fmt(h)}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
-  return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId})
+  return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId,colorId:'5'})
     .then(id=>{ if(id){ S.calIds[S.mo][calKey]=id; save(); } });
 }
 async function syncMonthToCalendar() {
   const e=S.data[S.mo]||{};
-  const jobs=Object.entries(e)
-    .filter(([,h]) => Number(h)>0)
-    .map(([day,h]) => {
-      const hours=Number(h);
+  const otMo=S.ot[S.mo]||{};
+  const days=[...new Set([...Object.keys(e), ...Object.keys(otMo)])];
+  const jobs=days.map(day => {
+      const hours=Number(e[day]||0);
       const from='09:00';
       const to=addH(from,hours);
       const p=[syncToCalendar(Number(day),hours,from,to)];
-      const otData=(S.ot[S.mo]||{})[Number(day)];
-      if (otData&&otData.h>0) {
+      const otData=otMo[Number(day)]||otMo[day];
+      const otH=otHours(otData);
+      if (otH>0) {
         const otFrom=otData.from||to;
-        p.push(syncOTToCalendar(Number(day),otData.h,otFrom,addH(otFrom,otData.h)));
+        const otTo=otEnd(otData)||addH(otFrom,otH);
+        p.push(syncOTToCalendar(Number(day),otH,otFrom,otTo));
       }
       return Promise.all(p);
     });
@@ -1336,7 +1370,7 @@ function clearDay()    {
   }
   S.modal=null; render();
 }
-function saveDay()     {
+async function saveDay() {
   const m=S.modal;
   const raw=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
   const h=Math.min(Math.max(raw,0), 24);
@@ -1346,18 +1380,22 @@ function saveDay()     {
   // persist overtime
   if (!S.ot[S.mo]) S.ot[S.mo]={};
   const otData=S.ot[S.mo][m.day];
-  const otH=otData?otData.h:0;
+  const otH=otHours(otData);
   const otRate=otPct(otData);
+  const syncJobs=[];
   if (otH>0) {
     const otFrom=(otData&&otData.from)||to;
-    S.ot[S.mo][m.day]={h:otH,pct:otRate,from:otFrom};
-    syncToCalendar(m.day,h,from,to);
-    syncOTToCalendar(m.day,otH,otFrom,addH(otFrom,otH));
+    const otTo=otEnd(otData)||addH(otFrom,otH);
+    S.ot[S.mo][m.day]={h:otH,pct:otRate,from:otFrom,to:otTo};
+    syncJobs.push(syncToCalendar(m.day,h,from,to));
+    syncJobs.push(syncOTToCalendar(m.day,otH,otFrom,otTo));
   } else {
     if (S.ot[S.mo][m.day]) delete S.ot[S.mo][m.day];
-    syncToCalendar(m.day,h,from,to);
-    syncOTToCalendar(m.day,0,'','');
+    syncJobs.push(syncToCalendar(m.day,h,from,to));
+    syncJobs.push(syncOTToCalendar(m.day,0,'',''));
   }
+  save();
+  await Promise.all(syncJobs);
   S.modal=null; render();
 }
 
