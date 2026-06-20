@@ -558,7 +558,7 @@ const I18N = {
     calendarNeedsSignIn:'Sign in with Google first', calTitle:'Work',
     calendarAuthFailed:'Calendar access was blocked. Add this Google account as an OAuth test user or publish and verify the app in Google Cloud.',
     exportData:'Export data', exportYear:'Export year (CSV)', exportBackup:'Full backup (JSON)',
-    overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Extra rate (%)',overtimeFrom:'OT Start',
+    overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Extra rate (%)',overtimeFrom:'OT Start',otOverlap:'OT overlaps work — will start at',
     additionalOpts:'Additional options',theme:'Theme',themeDark:'Dark',themeLight:'Light',
     dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     cur:{PLN:'Polish Zloty',RUB:'Russian Ruble',USD:'US Dollar',EUR:'Euro',GBP:'British Pound'}
@@ -576,7 +576,7 @@ const I18N = {
     calendarSync:'Синхронизация с календарём', on:'Вкл', off:'Выкл',
     calendarNeedsSignIn:'Сначала войдите через Google', calTitle:'Работа',
     exportData:'Экспорт данных', exportYear:'Экспорт года (CSV)', exportBackup:'Полный бэкап (JSON)',
-    overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Доп. ставка (%)',overtimeFrom:'Начало СУ',
+    overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Доп. ставка (%)',overtimeFrom:'Начало СУ',otOverlap:'СУ пересекаются с работой — начало сдвинуто на',
     additionalOpts:'Дополнительные опции',theme:'Тема',themeDark:'Тёмная',themeLight:'Светлая',
     dow:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
     cur:{PLN:'Злотый',RUB:'Рубль',USD:'Доллар',EUR:'Евро',GBP:'Фунт'}
@@ -594,7 +594,7 @@ const I18N = {
     calendarSync:'Synchronizacja z kalendarzem', on:'Wł', off:'Wył',
     calendarNeedsSignIn:'Najpierw zaloguj się przez Google', calTitle:'Praca',
     exportData:'Eksport danych', exportYear:'Eksport roku (CSV)', exportBackup:'Pełny backup (JSON)',
-    overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Stawka extra (%)',overtimeFrom:'Pocz. nadg.',
+    overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Stawka extra (%)',overtimeFrom:'Pocz. nadg.',otOverlap:'Nadgodziny nakładają się — start od',
     additionalOpts:'Dodatkowe opcje',theme:'Motyw',themeDark:'Ciemny',themeLight:'Jasny',
     dow:['Pon','Wt','Śr','Czw','Pt','Sob','Nd'],
     cur:{PLN:'Złoty',RUB:'Rubel',USD:'Dolar',EUR:'Euro',GBP:'Funt'}
@@ -725,6 +725,7 @@ function fullDate(k,d) {
   const[y,m]=k.split('-').map(Number);
   return new Date(y,m-1,d).toLocaleDateString(loc(),{weekday:'long',day:'numeric',month:'long'});
 }
+function timeToMin(hhmm) { if(!hhmm) return 0; const[h,m]=hhmm.split(':').map(Number); return h*60+m; }
 function calcRange(a,b) {
   if(!a||!b) return 0;
   const[ah,am]=a.split(':').map(Number),[bh,bm]=b.split(':').map(Number);
@@ -1056,7 +1057,7 @@ function rModal() {
               <div class="rlbl">${t('from')}</div>
               <input type="time" id="otFromInp" class="tmin" value="${otFrom}" oninput="setOTFrom(this.value)">
             </div>
-            <div class="rdash">вЂ”</div>
+            <div class=”rdash”>—</div>
             <div class="rfield">
               <div class="rlbl">${t('to')}</div>
               <input type="time" id="otToInp" class="tmin" value="${otTo}" oninput="setOTTo(this.value)">
@@ -1223,6 +1224,20 @@ function updOTPrev() {
   const otRate=otPct(otData);
   const otFrom=(otData&&otData.from)||'';
   const otTo=otEnd(otData);
+  // check overlap with regular work
+  const ph=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
+  const workEnd=m.mode==='h'?addH(m.from||'09:00',ph):(m.to||'17:00');
+  const overlap=otFrom&&otH>0&&timeToMin(otFrom)<timeToMin(workEnd);
+  let warn=document.getElementById('otOverlapWarn');
+  if (overlap) {
+    if (!warn){
+      warn=document.createElement('div'); warn.id='otOverlapWarn';
+      warn.style.cssText='color:#E07A5F;font-size:11px;text-align:center;margin-bottom:6px';
+      const fromInp=document.getElementById('otFromInp');
+      if (fromInp) fromInp.closest('.rrow').before(warn);
+    }
+    warn.textContent=`⚠ ${t('otOverlap')} ${workEnd}`;
+  } else if (warn) warn.remove();
   let el=document.querySelector('.ot-prev');
   if (otH>0) {
     if (!el){
@@ -1231,8 +1246,8 @@ function updOTPrev() {
       const anchor=pctInp ? pctInp.closest('.ot-row') : document.querySelector('.mult-row');
       if (anchor) anchor.after(el);
     }
-    const timeRange=(otFrom&&otTo)?` (${otFrom}-${otTo})`:'';
-    el.textContent=`+${otH}${L().hShort}${timeRange} x ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
+    const timeRange=(otFrom&&otTo)?` (${otFrom}–${otTo})`:'';
+    el.textContent=`+${otH}${L().hShort}${timeRange} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
   } else if (el) el.remove();
   updPrev();
 }
@@ -1384,8 +1399,9 @@ async function saveDay() {
   const otRate=otPct(otData);
   const syncJobs=[];
   if (otH>0) {
-    const otFrom=(otData&&otData.from)||to;
-    const otTo=otEnd(otData)||addH(otFrom,otH);
+    let otFrom=(otData&&otData.from)||to;
+    if (timeToMin(otFrom)<timeToMin(to)) otFrom=to; // не может начаться раньше конца работы
+    const otTo=addH(otFrom,otH);
     S.ot[S.mo][m.day]={h:otH,pct:otRate,from:otFrom,to:otTo};
     syncJobs.push(syncToCalendar(m.day,h,from,to));
     syncJobs.push(syncOTToCalendar(m.day,otH,otFrom,otTo));
