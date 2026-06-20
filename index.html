@@ -547,7 +547,7 @@ const I18N = {
     calendarNeedsSignIn:'Sign in with Google first', calTitle:'Work',
     calendarAuthFailed:'Calendar access was blocked. Add this Google account as an OAuth test user or publish and verify the app in Google Cloud.',
     exportData:'Export data', exportYear:'Export year (CSV)', exportBackup:'Full backup (JSON)',
-    overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Extra rate (%)',
+    overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Extra rate (%)',overtimeFrom:'OT Start',
     additionalOpts:'Additional options',theme:'Theme',themeDark:'Dark',themeLight:'Light',
     dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
     cur:{PLN:'Polish Zloty',RUB:'Russian Ruble',USD:'US Dollar',EUR:'Euro',GBP:'British Pound'}
@@ -565,7 +565,7 @@ const I18N = {
     calendarSync:'Синхронизация с календарём', on:'Вкл', off:'Выкл',
     calendarNeedsSignIn:'Сначала войдите через Google', calTitle:'Работа',
     exportData:'Экспорт данных', exportYear:'Экспорт года (CSV)', exportBackup:'Полный бэкап (JSON)',
-    overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Доп. ставка (%)',
+    overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Доп. ставка (%)',overtimeFrom:'Начало СУ',
     additionalOpts:'Дополнительные опции',theme:'Тема',themeDark:'Тёмная',themeLight:'Светлая',
     dow:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
     cur:{PLN:'Злотый',RUB:'Рубль',USD:'Доллар',EUR:'Евро',GBP:'Фунт'}
@@ -583,7 +583,7 @@ const I18N = {
     calendarSync:'Synchronizacja z kalendarzem', on:'Wł', off:'Wył',
     calendarNeedsSignIn:'Najpierw zaloguj się przez Google', calTitle:'Praca',
     exportData:'Eksport danych', exportYear:'Eksport roku (CSV)', exportBackup:'Pełny backup (JSON)',
-    overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Stawka extra (%)',
+    overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Stawka extra (%)',overtimeFrom:'Pocz. nadg.',
     additionalOpts:'Dodatkowe opcje',theme:'Motyw',themeDark:'Ciemny',themeLight:'Jasny',
     dow:['Pon','Wt','Śr','Czw','Pt','Sob','Nd'],
     cur:{PLN:'Złoty',RUB:'Rubel',USD:'Dolar',EUR:'Euro',GBP:'Funt'}
@@ -975,6 +975,8 @@ function rModal() {
   const otH=otData?otData.h:0;
   const otRate=otPct(otData);
   const pe=ph*S.cfg.rate + otEarn(otData);
+  const workEnd=isH?addH(m.from||'09:00',ph):(m.to||'17:00');
+  const otFrom=(otData&&otData.from)||workEnd;
   const prev=(ph>0||otH>0)
     ?`<div class="prev">${ph}${L().hShort}${otH>0?` +${otH}OT`:''} = ${pe.toFixed(0)} ${sym}</div>`:'';
   const psets=[4,5,6,7,8].map(h=>
@@ -1029,6 +1031,12 @@ function rModal() {
             <input type="number" class="ot-inp" value="${otH||''}" placeholder="0"
               min="0" max="24" step="0.5" oninput="setOT(this.value)">
             <span class="ot-lbl">${L().hShort} OT</span>
+          </div>
+          <div class="extra-clbl">${t('overtimeFrom')}</div>
+          <div class="ot-row">
+            <input type="time" id="otFromInp" class="tmin" style="flex:1;width:auto"
+              value="${otFrom}" oninput="setOTFrom(this.value)">
+            <span class="ot-lbl" id="otEndTime">${otH>0?`→ ${addH(otFrom,otH)}`:''}</span>
           </div>
           <div class="extra-clbl">${t('overtimeMult')}</div>
           <div class="mult-row">${multOpts}</div>
@@ -1168,11 +1176,21 @@ function setOTPct(v) {
   if (pctInp && pctInp.value !== String(pct)) pctInp.value=String(pct);
   updOTPrev();
 }
+function setOTFrom(v) {
+  const m=S.modal;
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT};
+  S.ot[S.mo][m.day]={...ex,from:v};
+  updOTPrev();
+}
 function updOTPrev() {
   const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
   const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
   const otH=otData?otData.h:0;
   const otRate=otPct(otData);
+  const otFrom=(otData&&otData.from)||'';
+  const endEl=document.getElementById('otEndTime');
+  if (endEl) endEl.textContent=(otH>0&&otFrom)?`→ ${addH(otFrom,otH)}`:'';
   let el=document.querySelector('.ot-prev');
   if (otH>0) {
     if (!el){
@@ -1181,7 +1199,8 @@ function updOTPrev() {
       const anchor=pctInp ? pctInp.closest('.ot-row') : document.querySelector('.mult-row');
       if (anchor) anchor.after(el);
     }
-    el.textContent=`+${otH}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
+    const timeRange=otFrom?` (${otFrom}–${addH(otFrom,otH)})`:'';
+    el.textContent=`+${otH}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}${timeRange}`;
   } else if (el) el.remove();
   updPrev();
 }
@@ -1269,6 +1288,23 @@ function syncToCalendar(day,h,from,to) {
   return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId})
     .then(id=>{ if(id){ S.calIds[S.mo][day]=id; save(); } });
 }
+function syncOTToCalendar(day, h, from, to) {
+  if (!(S.cfg.calSync && S.user && window.__fb)) return Promise.resolve(null);
+  if (!S.calIds[S.mo]) S.calIds[S.mo]={};
+  const calKey=`${day}_ot`;
+  const calId=S.calIds[S.mo][calKey];
+  if (h<=0) {
+    if (calId) { window.__fb.deleteCalendarEvent(calId); delete S.calIds[S.mo][calKey]; save(); }
+    return Promise.resolve(null);
+  }
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const otData=S.ot[S.mo]&&S.ot[S.mo][day];
+  const otRate=otPct(otData);
+  const title=`${t('calTitle')} OT · ${fmt(h)}${L().hShort}`;
+  const notes=`${t('overtime')}: ${fmt(h)}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
+  return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId})
+    .then(id=>{ if(id){ S.calIds[S.mo][calKey]=id; save(); } });
+}
 async function syncMonthToCalendar() {
   const e=S.data[S.mo]||{};
   const jobs=Object.entries(e)
@@ -1276,15 +1312,28 @@ async function syncMonthToCalendar() {
     .map(([day,h]) => {
       const hours=Number(h);
       const from='09:00';
-      return syncToCalendar(Number(day),hours,from,addH(from,hours));
+      const to=addH(from,hours);
+      const p=[syncToCalendar(Number(day),hours,from,to)];
+      const otData=(S.ot[S.mo]||{})[Number(day)];
+      if (otData&&otData.h>0) {
+        const otFrom=otData.from||to;
+        p.push(syncOTToCalendar(Number(day),otData.h,otFrom,addH(otFrom,otData.h)));
+      }
+      return Promise.all(p);
     });
   await Promise.all(jobs);
 }
 function clearDay()    {
-  const day=S.modal.day, calId=S.calIds[S.mo]&&S.calIds[S.mo][day];
+  const day=S.modal.day;
+  const calId=S.calIds[S.mo]&&S.calIds[S.mo][day];
+  const otCalId=S.calIds[S.mo]&&S.calIds[S.mo][`${day}_ot`];
   delEnt(day);
   if (S.ot[S.mo]) delete S.ot[S.mo][day];
   if (calId && S.cfg.calSync && window.__fb) window.__fb.deleteCalendarEvent(calId);
+  if (otCalId && S.cfg.calSync && window.__fb) {
+    window.__fb.deleteCalendarEvent(otCalId);
+    if (S.calIds[S.mo]) delete S.calIds[S.mo][`${day}_ot`];
+  }
   S.modal=null; render();
 }
 function saveDay()     {
@@ -1299,9 +1348,16 @@ function saveDay()     {
   const otData=S.ot[S.mo][m.day];
   const otH=otData?otData.h:0;
   const otRate=otPct(otData);
-  if (otH>0) S.ot[S.mo][m.day]={h:otH,pct:otRate};
-  else if (S.ot[S.mo][m.day]) delete S.ot[S.mo][m.day];
-  syncToCalendar(m.day,h,from,to);
+  if (otH>0) {
+    const otFrom=(otData&&otData.from)||to;
+    S.ot[S.mo][m.day]={h:otH,pct:otRate,from:otFrom};
+    syncToCalendar(m.day,h,from,to);
+    syncOTToCalendar(m.day,otH,otFrom,addH(otFrom,otH));
+  } else {
+    if (S.ot[S.mo][m.day]) delete S.ot[S.mo][m.day];
+    syncToCalendar(m.day,h,from,to);
+    syncOTToCalendar(m.day,0,'','');
+  }
   S.modal=null; render();
 }
 
