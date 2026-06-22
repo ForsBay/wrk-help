@@ -267,6 +267,17 @@ html.light .seg{background:#F0F4FA}
 html.light .seg button{color:#6B7F96}
 html.light .seg button.on{background:#fff;color:#1A2742}
 html.light .signout{background:rgba(192,99,74,.09);border-color:rgba(192,99,74,.3)}
+
+/* ── Collapsible section headers ── */
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-arr{color:#5A8DF0;font-size:17px;font-weight:700;background:none;border:none;padding:0;cursor:pointer;line-height:1}
+/* ── Calendar connected badge ── */
+.cal-hdr-row{display:flex;justify-content:space-between;align-items:center}
+.cal-badge{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.cal-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
+/* ── Profile lang seg: allow wrapping for many languages ── */
+.seg{flex-wrap:wrap}
+.seg button{min-width:40px}
 </style>
 </head>
 <body>
@@ -535,17 +546,27 @@ onAuthStateChanged(auth, async user => {
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
 const CUR = {
-  PLN:{s:'zł'},
-  RUB:{s:'₽'},
   USD:{s:'$'},
   EUR:{s:'€'},
   GBP:{s:'£'},
+  PLN:{s:'zł'},
+  UAH:{s:'₴'},
+  RUB:{s:'₽'},
+  KZT:{s:'₸'},
+  TRY:{s:'₺'},
+  CAD:{s:'C$'},
+  AUD:{s:'A$'},
+  CHF:{s:'Fr'},
+  JPY:{s:'¥'},
+  CNY:{s:'元'},
+  CZK:{s:'Kč'},
+  NOK:{s:'kr'},
 };
 
 // ── i18n ───────────────────────────────────────────────────────────────────
-const LANGS = ['en','ru','pl'];
-const LANGNAME = { en:'English', ru:'Русский', pl:'Polski' };
-const LOCALE   = { en:'en-US', ru:'ru-RU', pl:'pl-PL' };
+const LANGS = ['en','ru','pl','uk','de','fr','es','tr','it','kk'];
+const LANGNAME = { en:'English', ru:'Русский', pl:'Polski', uk:'Українська', de:'Deutsch', fr:'Français', es:'Español', tr:'Türkçe', it:'Italiano', kk:'Қазақша' };
+const LOCALE   = { en:'en-US', ru:'ru-RU', pl:'pl-PL', uk:'uk-UA', de:'de-DE', fr:'fr-FR', es:'es-ES', tr:'tr-TR', it:'it-IT', kk:'kk-KZ' };
 
 const I18N = {
   en: {
@@ -565,7 +586,7 @@ const I18N = {
     overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Extra rate (%)',overtimeFrom:'OT Start',otOverlap:'OT overlaps work — will start at',
     additionalOpts:'Additional options',theme:'Theme',themeDark:'Dark',themeLight:'Light',
     dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-    cur:{PLN:'Polish Zloty',RUB:'Russian Ruble',USD:'US Dollar',EUR:'Euro',GBP:'British Pound'}
+    cur:{USD:'US Dollar',EUR:'Euro',GBP:'British Pound',PLN:'Polish Zloty',UAH:'Ukrainian Hryvnia',RUB:'Russian Ruble',KZT:'Kazakhstani Tenge',TRY:'Turkish Lira',CAD:'Canadian Dollar',AUD:'Australian Dollar',CHF:'Swiss Franc',JPY:'Japanese Yen',CNY:'Chinese Yuan',CZK:'Czech Koruna',NOK:'Norwegian Krone'}
   },
   ru: {
     sub:'Учёт часов', work:'Рабочие дни', stats:'Статистика', settings:'Настройки',
@@ -579,11 +600,12 @@ const I18N = {
     yearSuffix:' год',
     calendarSync:'Синхронизация с календарём', on:'Вкл', off:'Выкл',
     calendarNeedsSignIn:'Сначала войдите через Google', calTitle:'Работа',
+    calendarAuthFailed:'Доступ к календарю заблокирован. Добавьте аккаунт Google как тестового пользователя OAuth или опубликуйте приложение в Google Cloud.',
     exportData:'Экспорт данных', exportYear:'Экспорт года (CSV)', exportBackup:'Полный бэкап (JSON)',
     overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Доп. ставка (%)',overtimeFrom:'Начало СУ',otOverlap:'СУ пересекаются с работой — начало сдвинуто на',
     additionalOpts:'Дополнительные опции',theme:'Тема',themeDark:'Тёмная',themeLight:'Светлая',
     dow:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
-    cur:{PLN:'Злотый',RUB:'Рубль',USD:'Доллар',EUR:'Евро',GBP:'Фунт'}
+    cur:{USD:'Доллар',EUR:'Евро',GBP:'Фунт',PLN:'Злотый',UAH:'Гривна',RUB:'Рубль',KZT:'Тенге',TRY:'Лира',CAD:'Кан. доллар',AUD:'Австр. доллар',CHF:'Франк',JPY:'Иена',CNY:'Юань',CZK:'Крона',NOK:'Норв. крона'}
   },
   pl: {
     sub:'Śledzenie czasu', work:'Dni robocze', stats:'Statystyki', settings:'Ustawienia',
@@ -597,11 +619,145 @@ const I18N = {
     yearSuffix:' rok',
     calendarSync:'Synchronizacja z kalendarzem', on:'Wł', off:'Wył',
     calendarNeedsSignIn:'Najpierw zaloguj się przez Google', calTitle:'Praca',
+    calendarAuthFailed:'Dostęp do kalendarza zablokowany. Dodaj konto Google jako użytkownika testowego OAuth lub opublikuj aplikację w Google Cloud.',
     exportData:'Eksport danych', exportYear:'Eksport roku (CSV)', exportBackup:'Pełny backup (JSON)',
     overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Stawka extra (%)',overtimeFrom:'Pocz. nadg.',otOverlap:'Nadgodziny nakładają się — start od',
     additionalOpts:'Dodatkowe opcje',theme:'Motyw',themeDark:'Ciemny',themeLight:'Jasny',
     dow:['Pon','Wt','Śr','Czw','Pt','Sob','Nd'],
-    cur:{PLN:'Złoty',RUB:'Rubel',USD:'Dolar',EUR:'Euro',GBP:'Funt'}
+    cur:{USD:'Dolar',EUR:'Euro',GBP:'Funt',PLN:'Złoty',UAH:'Hrywna',RUB:'Rubel',KZT:'Tenge',TRY:'Lira',CAD:'Dolar kanad.',AUD:'Dolar austral.',CHF:'Frank',JPY:'Jen',CNY:'Juan',CZK:'Korona',NOK:'Korona norw.'}
+  },
+  uk: {
+    sub:'Облік часу', work:'Робочі дні', stats:'Статистика', settings:'Налаштування',
+    rate:'Ставка за годину', currency:'Валюта', language:'Мова', save:'Зберегти',
+    days:'Днів', hours:'Годин', perHour:'/год', earnings:'Заробіток', month:'Місяць', total:'Разом',
+    planning:'Планування', planHours:'Запланувати години', hoursWorked:'Скільки годин відпрацьовано?',
+    manual:'Вручну', byTime:'За часом', hShort:'г', from:'З', to:'До',
+    clear:'Очистити', plan:'Запланувати', planBadge:'план',
+    profile:'Профіль', signIn:'Увійти через Google', signOut:'Вийти',
+    notSignedIn:'Не авторизовано', synced:'Синхронізовано', syncing:'Синхронізація…', syncOff:'Офлайн',
+    yearSuffix:' рік',
+    calendarSync:'Синхронізація з календарем', on:'Увімк', off:'Вимк',
+    calendarNeedsSignIn:'Спочатку увійдіть через Google', calTitle:'Робота',
+    calendarAuthFailed:'Доступ до календаря заблоковано. Додайте цей обліковий запис Google як тестового користувача OAuth або опублікуйте додаток у Google Cloud.',
+    exportData:'Експорт даних', exportYear:'Рік (CSV)', exportBackup:'Повний бекап (JSON)',
+    overtime:'Понаднормові',overtimeH:'Дод. години',overtimeMult:'Дод. ставка (%)',overtimeFrom:'Поч. ПН',otOverlap:'ПН перетинаються — початок зміщено на',
+    additionalOpts:'Додаткові опції',theme:'Тема',themeDark:'Темна',themeLight:'Світла',
+    dow:['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],
+    cur:{USD:'Долар',EUR:'Євро',GBP:'Фунт',PLN:'Злотий',UAH:'Гривня',RUB:'Рубль',KZT:'Тенге',TRY:'Ліра',CAD:'Кан. долар',AUD:'Авст. долар',CHF:'Франк',JPY:'Єна',CNY:'Юань',CZK:'Крона',NOK:'Норв. крона'}
+  },
+  de: {
+    sub:'Zeiterfassung', work:'Arbeitstage', stats:'Statistiken', settings:'Einstellungen',
+    rate:'Stundensatz', currency:'Währung', language:'Sprache', save:'Speichern',
+    days:'Tage', hours:'Stunden', perHour:'/Std', earnings:'Verdienst', month:'Monat', total:'Gesamt',
+    planning:'Planung', planHours:'Stunden planen', hoursWorked:'Wie viele Stunden gearbeitet?',
+    manual:'Manuell', byTime:'Nach Zeit', hShort:'h', from:'Von', to:'Bis',
+    clear:'Löschen', plan:'Planen', planBadge:'plan',
+    profile:'Profil', signIn:'Mit Google anmelden', signOut:'Abmelden',
+    notSignedIn:'Nicht angemeldet', synced:'Synchronisiert', syncing:'Synchronisiere…', syncOff:'Offline',
+    yearSuffix:'',
+    calendarSync:'Kalender-Sync', on:'Ein', off:'Aus',
+    calendarNeedsSignIn:'Zuerst mit Google anmelden', calTitle:'Arbeit',
+    calendarAuthFailed:'Kalenderzugriff wurde blockiert. Fügen Sie dieses Google-Konto als OAuth-Testnutzer hinzu oder veröffentlichen Sie die App in der Google Cloud.',
+    exportData:'Daten exportieren', exportYear:'Jahr exportieren (CSV)', exportBackup:'Vollständiges Backup (JSON)',
+    overtime:'Überstunden',overtimeH:'ÜS-Stunden',overtimeMult:'Extra-Satz (%)',overtimeFrom:'ÜS-Beginn',otOverlap:'ÜS überschneidet sich — Beginn auf',
+    additionalOpts:'Weitere Optionen',theme:'Thema',themeDark:'Dunkel',themeLight:'Hell',
+    dow:['Mo','Di','Mi','Do','Fr','Sa','So'],
+    cur:{USD:'US-Dollar',EUR:'Euro',GBP:'Brit. Pfund',PLN:'Poln. Zloty',UAH:'Ukr. Hrywnja',RUB:'Russ. Rubel',KZT:'Kasach. Tenge',TRY:'Türk. Lira',CAD:'Kanad. Dollar',AUD:'Austral. Dollar',CHF:'Schweizer Franken',JPY:'Japan. Yen',CNY:'Chin. Yuan',CZK:'Tschech. Krone',NOK:'Norweg. Krone'}
+  },
+  fr: {
+    sub:'Suivi du temps', work:'Jours de travail', stats:'Statistiques', settings:'Paramètres',
+    rate:'Taux horaire', currency:'Devise', language:'Langue', save:'Enregistrer',
+    days:'Jours', hours:'Heures', perHour:'/h', earnings:'Gains', month:'Mois', total:'Total',
+    planning:'Planification', planHours:'Planifier les heures', hoursWorked:"Combien d'heures travaillées ?",
+    manual:'Manuel', byTime:'Par horaire', hShort:'h', from:'De', to:'À',
+    clear:'Effacer', plan:'Planifier', planBadge:'plan',
+    profile:'Profil', signIn:'Se connecter avec Google', signOut:'Se déconnecter',
+    notSignedIn:'Non connecté', synced:'Synchronisé', syncing:'Synchronisation…', syncOff:'Hors ligne',
+    yearSuffix:'',
+    calendarSync:'Sync calendrier', on:'Activé', off:'Désactivé',
+    calendarNeedsSignIn:"Connectez-vous d'abord avec Google", calTitle:'Travail',
+    calendarAuthFailed:"L'accès au calendrier a été bloqué. Ajoutez ce compte Google comme utilisateur test OAuth ou publiez l'application dans Google Cloud.",
+    exportData:'Exporter les données', exportYear:"Exporter l'année (CSV)", exportBackup:'Sauvegarde complète (JSON)',
+    overtime:'Heures sup.',overtimeH:'Heures HS',overtimeMult:'Taux extra (%)',overtimeFrom:'Début HS',otOverlap:'HS se chevauche — début décalé à',
+    additionalOpts:'Options supplémentaires',theme:'Thème',themeDark:'Sombre',themeLight:'Clair',
+    dow:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],
+    cur:{USD:'Dollar US',EUR:'Euro',GBP:'Livre sterling',PLN:'Zloty polonais',UAH:'Hryvnia ukrainienne',RUB:'Rouble russe',KZT:'Tenge kazakh',TRY:'Livre turque',CAD:'Dollar canadien',AUD:'Dollar australien',CHF:'Franc suisse',JPY:'Yen japonais',CNY:'Yuan chinois',CZK:'Couronne tchèque',NOK:'Couronne norvégienne'}
+  },
+  es: {
+    sub:'Control de tiempo', work:'Días laborables', stats:'Estadísticas', settings:'Ajustes',
+    rate:'Tarifa por hora', currency:'Moneda', language:'Idioma', save:'Guardar',
+    days:'Días', hours:'Horas', perHour:'/h', earnings:'Ingresos', month:'Mes', total:'Total',
+    planning:'Planificación', planHours:'Planificar horas', hoursWorked:'¿Cuántas horas trabajadas?',
+    manual:'Manual', byTime:'Por horario', hShort:'h', from:'Desde', to:'Hasta',
+    clear:'Borrar', plan:'Planificar', planBadge:'plan',
+    profile:'Perfil', signIn:'Iniciar sesión con Google', signOut:'Cerrar sesión',
+    notSignedIn:'No conectado', synced:'Sincronizado', syncing:'Sincronizando…', syncOff:'Sin conexión',
+    yearSuffix:'',
+    calendarSync:'Sync de calendario', on:'Activo', off:'Inactivo',
+    calendarNeedsSignIn:'Inicia sesión con Google primero', calTitle:'Trabajo',
+    calendarAuthFailed:'El acceso al calendario fue bloqueado. Añada esta cuenta de Google como usuario de prueba OAuth o publique la app en Google Cloud.',
+    exportData:'Exportar datos', exportYear:'Exportar año (CSV)', exportBackup:'Copia de seguridad (JSON)',
+    overtime:'Horas extra',overtimeH:'Horas HE',overtimeMult:'Tarifa extra (%)',overtimeFrom:'Inicio HE',otOverlap:'HE se superpone — inicio movido a',
+    additionalOpts:'Opciones adicionales',theme:'Tema',themeDark:'Oscuro',themeLight:'Claro',
+    dow:['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
+    cur:{USD:'Dólar US',EUR:'Euro',GBP:'Libra esterlina',PLN:'Esloti polaco',UAH:'Grivna ucraniana',RUB:'Rublo ruso',KZT:'Tenge kazajo',TRY:'Lira turca',CAD:'Dólar canadiense',AUD:'Dólar australiano',CHF:'Franco suizo',JPY:'Yen japonés',CNY:'Yuan chino',CZK:'Corona checa',NOK:'Corona noruega'}
+  },
+  tr: {
+    sub:'Zaman takibi', work:'Çalışma günleri', stats:'İstatistikler', settings:'Ayarlar',
+    rate:'Saatlik ücret', currency:'Para birimi', language:'Dil', save:'Kaydet',
+    days:'Gün', hours:'Saat', perHour:'/saat', earnings:'Kazanç', month:'Ay', total:'Toplam',
+    planning:'Planlama', planHours:'Saatleri planla', hoursWorked:'Kaç saat çalışıldı?',
+    manual:'Manuel', byTime:'Saate göre', hShort:'s', from:'İtibaren', to:'Kadar',
+    clear:'Temizle', plan:'Planla', planBadge:'plan',
+    profile:'Profil', signIn:'Google ile giriş yap', signOut:'Çıkış yap',
+    notSignedIn:'Giriş yapılmadı', synced:'Senkronize', syncing:'Senkronize ediliyor…', syncOff:'Çevrimdışı',
+    yearSuffix:'',
+    calendarSync:'Takvim senkronizasyonu', on:'Açık', off:'Kapalı',
+    calendarNeedsSignIn:'Önce Google ile giriş yapın', calTitle:'Çalışma',
+    calendarAuthFailed:"Takvim erişimi engellendi. Bu Google hesabını OAuth test kullanıcısı olarak ekleyin veya uygulamayı Google Cloud'da yayınlayın.",
+    exportData:'Verileri dışa aktar', exportYear:'Yılı dışa aktar (CSV)', exportBackup:'Tam yedek (JSON)',
+    overtime:'Fazla mesai',overtimeH:'FM saatleri',overtimeMult:'Ekstra oran (%)',overtimeFrom:'FM başlangıcı',otOverlap:'FM çakışıyor — başlangıç kaydırıldı',
+    additionalOpts:'Ek seçenekler',theme:'Tema',themeDark:'Koyu',themeLight:'Açık',
+    dow:['Pzt','Sal','Çrş','Per','Cum','Cmt','Paz'],
+    cur:{USD:'ABD doları',EUR:'Euro',GBP:'İngiliz sterlini',PLN:'Polonya zlotisi',UAH:'Ukrayna grivnası',RUB:'Rus rublesi',KZT:'Kazak tengesi',TRY:'Türk lirası',CAD:'Kanada doları',AUD:'Avustralya doları',CHF:'İsviçre frankı',JPY:'Japon yeni',CNY:'Çin yuanı',CZK:'Çek kronası',NOK:'Norveç kronası'}
+  },
+  it: {
+    sub:'Monitoraggio ore', work:'Giorni lavorativi', stats:'Statistiche', settings:'Impostazioni',
+    rate:'Tariffa oraria', currency:'Valuta', language:'Lingua', save:'Salva',
+    days:'Giorni', hours:'Ore', perHour:'/ora', earnings:'Guadagni', month:'Mese', total:'Totale',
+    planning:'Pianificazione', planHours:'Pianifica ore', hoursWorked:'Quante ore lavorate?',
+    manual:'Manuale', byTime:'Per orario', hShort:'h', from:'Da', to:'A',
+    clear:'Cancella', plan:'Pianifica', planBadge:'piano',
+    profile:'Profilo', signIn:'Accedi con Google', signOut:'Disconnetti',
+    notSignedIn:'Non connesso', synced:'Sincronizzato', syncing:'Sincronizzazione…', syncOff:'Offline',
+    yearSuffix:'',
+    calendarSync:'Sync calendario', on:'Attivo', off:'Disattivo',
+    calendarNeedsSignIn:'Accedi prima con Google', calTitle:'Lavoro',
+    calendarAuthFailed:"Accesso al calendario bloccato. Aggiungi questo account Google come utente test OAuth o pubblica l'app in Google Cloud.",
+    exportData:'Esporta dati', exportYear:'Esporta anno (CSV)', exportBackup:'Backup completo (JSON)',
+    overtime:'Straordinari',overtimeH:'Ore straord.',overtimeMult:'Tariffa extra (%)',overtimeFrom:'Inizio straord.',otOverlap:'Straord. si sovrappone — inizio spostato a',
+    additionalOpts:'Opzioni aggiuntive',theme:'Tema',themeDark:'Scuro',themeLight:'Chiaro',
+    dow:['Lun','Mar','Mer','Gio','Ven','Sab','Dom'],
+    cur:{USD:'Dollaro US',EUR:'Euro',GBP:'Sterlina brit.',PLN:'Zloty polacco',UAH:'Grivna ucraina',RUB:'Rublo russo',KZT:'Tenge kazako',TRY:'Lira turca',CAD:'Dollaro canadese',AUD:'Dollaro australiano',CHF:'Franco svizzero',JPY:'Yen giapponese',CNY:'Yuan cinese',CZK:'Corona ceca',NOK:'Corona norvegese'}
+  },
+  kk: {
+    sub:'Уақытты бақылау', work:'Жұмыс күндері', stats:'Статистика', settings:'Баптаулар',
+    rate:'Сағаттық ставка', currency:'Валюта', language:'Тіл', save:'Сақтау',
+    days:'Күн', hours:'Сағат', perHour:'/сағ', earnings:'Табыс', month:'Ай', total:'Барлығы',
+    planning:'Жоспарлау', planHours:'Сағат жоспарлау', hoursWorked:'Неше сағат жұмыс істелді?',
+    manual:'Қолмен', byTime:'Уақыт бойынша', hShort:'с', from:'Бастап', to:'Дейін',
+    clear:'Тазалау', plan:'Жоспарлау', planBadge:'жоспар',
+    profile:'Профиль', signIn:'Google арқылы кіру', signOut:'Шығу',
+    notSignedIn:'Кіру жасалмаған', synced:'Синхрондалды', syncing:'Синхрондалуда…', syncOff:'Желісіз',
+    yearSuffix:' жыл',
+    calendarSync:'Күнтізбемен синхрондау', on:'Қосу', off:'Өшіру',
+    calendarNeedsSignIn:'Алдымен Google арқылы кіріңіз', calTitle:'Жұмыс',
+    calendarAuthFailed:'Күнтізбеге қатынасу бұғатталды. Бұл Google тіркелгісін OAuth тест пайдаланушысы ретінде қосыңыз немесе қосымшаны Google Cloud-та жариялаңыз.',
+    exportData:'Деректерді экспорттау', exportYear:'Жылды экспорттау (CSV)', exportBackup:'Толық сақтық көшірме (JSON)',
+    overtime:'Артық сағат',overtimeH:'Артық сағ.',overtimeMult:'Қосымша мөлш. (%)',overtimeFrom:'АС басталуы',otOverlap:'АС қабаттасады — басталуы жылжытылды',
+    additionalOpts:'Қосымша опциялар',theme:'Тақырып',themeDark:'Күңгірт',themeLight:'Жарық',
+    dow:['Дс','Сс','Ср','Бс','Жм','Сб','Жс'],
+    cur:{USD:'АҚШ доллары',EUR:'Еуро',GBP:'Британ фунты',PLN:'Польша злотысы',UAH:'Украина гривнасы',RUB:'Ресей рублі',KZT:'Қазақстан теңгесі',TRY:'Түрік лирасы',CAD:'Канада доллары',AUD:'Австралия доллары',CHF:'Швейцария франкі',JPY:'Жапон иенасы',CNY:'Қытай юані',CZK:'Чех кронасы',NOK:'Норвегия кронасы'}
   }
 };
 function L()    { return I18N[S.cfg.lang] || I18N.en; }
@@ -812,7 +968,7 @@ function rMain() {
 
   return `<div class="view">
     <div class="hdr">
-      <div><div class="hdr-sub">${t('sub')}</div><div class="hdr-title">${t('work')}</div></div>
+      <div><div class="hdr-sub">${t('sub')}</div><div class="hdr-title">Shiftly</div></div>
      <div class="hdr-right">
   ${profBtn}
   <button class="ibtn" title="${t('stats')}" onclick="openStats()">📊</button>
@@ -935,14 +1091,28 @@ function rStats() {
 // ── SETTINGS VIEW ──────────────────────────────────────────────────────────
 function rSettings() {
   const d=S.dcfg, sym=CUR[d.cur]?.s||d.cur;
-  const clist=Object.entries(CUR).map(([c,i])=>
+
+  // Calendar connected indicator
+  const calConnected = d.calSync && !!S.user;
+  const calDotColor  = calConnected ? '#3DD6AC' : '#5E7A94';
+  const calStatusTxt = calConnected ? t('synced') : t('off');
+
+  // Collapsible currency list
+  const curOpen  = !!d.curOpen;
+  const visCurs  = curOpen ? Object.entries(CUR) : Object.entries(CUR).filter(([c])=>c===d.cur);
+  const clist = visCurs.map(([c,i])=>
     `<button class="copt${d.cur===c?' sel':''}" onclick="selCur('${c}')">
       <span>${L().cur[c]||c}</span><span>${i.s} ${c}</span>
     </button>`).join('');
-  const llist=LANGS.map(l=>
+
+  // Collapsible language list
+  const langOpen = !!d.langOpen;
+  const visLangs = langOpen ? LANGS : [S.cfg.lang];
+  const llist = visLangs.map(l=>
     `<button class="copt${S.cfg.lang===l?' sel':''}" onclick="setLang('${l}')">
       <span>${LANGNAME[l]}</span><span>${l.toUpperCase()}</span>
     </button>`).join('');
+
   return `<div class="view">
     <div class="shdr"><button class="ibtn" onclick="closeCfg()">←</button><h2>${t('settings')}</h2></div>
     <div class="sbody">
@@ -954,12 +1124,18 @@ function rSettings() {
         </div>
       </div>
       <div class="scard">
-        <div class="clbl">${t('currency')}</div>
-        <div class="curlist">${clist}</div>
+        <div class="sec-hdr" onclick="toggleCurList()">
+          <span class="clbl" style="margin-bottom:0">${t('currency')}</span>
+          <span class="sec-arr">${curOpen?'▴':'▾'}</span>
+        </div>
+        <div class="curlist" style="margin-top:10px">${clist}</div>
       </div>
       <div class="scard">
-        <div class="clbl">${t('language')}</div>
-        <div class="curlist">${llist}</div>
+        <div class="sec-hdr" onclick="toggleLangList()">
+          <span class="clbl" style="margin-bottom:0">${t('language')}</span>
+          <span class="sec-arr">${langOpen?'▴':'▾'}</span>
+        </div>
+        <div class="curlist" style="margin-top:10px">${llist}</div>
       </div>
       <div class="scard">
         <div class="clbl">${t('theme')}</div>
@@ -969,8 +1145,13 @@ function rSettings() {
         </div>
       </div>
       <div class="scard">
-        <div class="clbl">${t('calendarSync')}</div>
-        <div class="mtoggle">
+        <div class="cal-hdr-row">
+          <span class="clbl" style="margin-bottom:0">${t('calendarSync')}</span>
+          <span class="cal-badge" style="color:${calDotColor}">
+            <span class="cal-dot" style="background:${calDotColor}"></span>${calStatusTxt}
+          </span>
+        </div>
+        <div class="mtoggle" style="margin-top:10px">
           <button class="mbtn${!d.calSync?' on':''}" onclick="toggleCalSync(false)">${t('off')}</button>
           <button class="mbtn${d.calSync?' on':''}" onclick="toggleCalSync(true)">${t('on')}</button>
         </div>
@@ -1304,9 +1485,11 @@ function openDay(d)    {
 }
 
 function ovClick(e)    { if(e.target.classList.contains('overlay')){ S.modal=null; render(); } }
-function openCfg()     { S.dcfg={...S.cfg}; S.view='settings'; render(); }
+function openCfg()     { S.dcfg={...S.cfg, curOpen:false, langOpen:false}; S.view='settings'; render(); }
 function closeCfg()    { S.view='main'; render(); }
 function saveCfg()     { S.cfg={...S.dcfg}; save(); S.view='main'; render(); }
+function toggleCurList()  { S.dcfg.curOpen  = !S.dcfg.curOpen;  render(); }
+function toggleLangList() { S.dcfg.langOpen = !S.dcfg.langOpen; render(); }
 function dRate(v)      { S.dcfg.rate=parseFloat(v)||0; }
 function selCur(c)     { S.dcfg.cur=c; render(); const r=document.getElementById('rin'); if(r)r.value=S.dcfg.rate; }
 function setMode(m)    { S.modal.mode=m; render(); }
