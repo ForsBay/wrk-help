@@ -5,11 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="Hours">
+<meta name="apple-mobile-web-app-title" content="Shiftly">
 <meta name="theme-color" content="#0B1220">
-<title>Work Hours</title>
+<title>Shiftly</title>
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.PNG">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icon-167.png">
 <meta name="mobile-web-app-capable" content="yes">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -1475,11 +1479,11 @@ function exportYearCSV() {
   const totD=yd.reduce((a,d)=>a+d.days,0), totH=yd.reduce((a,d)=>a+d.hours,0), totE=yd.reduce((a,d)=>a+d.earnings,0);
   rows.push([t('total'), totD, fmt(totH), totE.toFixed(2)]);
   const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  downloadFile(`work-hours-${S.yearKey}.csv`, '\uFEFF'+csv, 'text/csv;charset=utf-8');
+  downloadFile(`shiftly-${S.yearKey}.csv`, '\uFEFF'+csv, 'text/csv;charset=utf-8');
 }
 function exportBackupJSON() {
   const payload={exportedAt:new Date().toISOString(), cfg:S.cfg, data:S.data, ot:S.ot};
-  downloadFile(`work-hours-backup-${moKey()}.json`, JSON.stringify(payload,null,2), 'application/json');
+  downloadFile(`shiftly-backup-${moKey()}.json`, JSON.stringify(payload,null,2), 'application/json');
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
