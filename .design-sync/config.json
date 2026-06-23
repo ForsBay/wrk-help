@@ -1,0 +1,15 @@
+{
+  "projectId": "80e7b602-f07f-475f-b0dd-9c51e8510abb",
+  "pkg": "shiftly-marketing",
+  "globalName": "ShiftlyMarketing",
+  "shape": "package",
+  "srcDir": "../../components",
+  "tsconfig": "../../tsconfig.json",
+  "cssEntry": "globals.css",
+  "componentSrcMap": {
+    "BackgroundScene": null,
+    "CustomCursor": null,
+    "SmoothScroll": null,
+    "CtaSection": "../../components/CTA.tsx"
+  }
+}
