@@ -14,7 +14,7 @@ const DOWNLOAD_URLS: Record<string, string> = {
   Windows: '', // ← TODO: set the real Windows installer URL
   Android: '',
   iPhone: '',
-  Web: '',
+  Web: '/app/', // integrated web app (served from public/app; /app/ is in SW scope)
 }
 
 /* ── Platform glyphs ─────────────────────────────────────────────── */
@@ -56,14 +56,19 @@ export default function CTA() {
     { name: 'Windows', meta: 'Windows 10 / 11',  icon: <WindowsIcon />, status: c.available,  dot: '#34c98a', available: true,  cta: c.get },
     { name: 'Android', meta: 'Google Play',       icon: <AndroidIcon />, status: c.comingSoon, dot: '#f5b94a', available: false, cta: c.comingSoonBtn },
     { name: 'iPhone',  meta: 'App Store · iOS',   icon: <AppleIcon />,   status: c.comingSoon, dot: '#f5b94a', available: false, cta: c.comingSoonBtn },
-    { name: 'Web',     meta: 'PWA · any browser', icon: <WebIcon />,     status: c.inDev,      dot: '#f5b94a', available: false, cta: c.comingSoonBtn },
+    { name: 'Web',     meta: 'PWA · any browser', icon: <WebIcon />,     status: c.available,  dot: '#34c98a', available: true,  cta: c.web },
   ]
 
   const handleDownload = (p: typeof PLATFORMS[number]) => {
     const url = DOWNLOAD_URLS[p.name]
     if (p.available && url) {
-      // Real download/open — let the browser handle the installer or store page.
-      window.open(url, '_blank', 'noopener,noreferrer')
+      if (url.startsWith('/')) {
+        // Internal route — the integrated web app lives at /app.
+        window.location.href = url
+      } else {
+        // External installer / store page.
+        window.open(url, '_blank', 'noopener,noreferrer')
+      }
     } else {
       // Nothing to download yet → be honest instead of doing nothing.
       setModalPlatform(p.name)

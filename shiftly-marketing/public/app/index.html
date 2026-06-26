@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Integrated under shiftlytime.com/app — resolve every relative asset (manifest, icons, ./sw.js) under /app/ -->
+<base href="/app/">
+<link rel="canonical" href="https://shiftlytime.com/app/">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Shiftly">
+<meta name="theme-color" content="#0B1220">
+<title>Shiftly</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
+<link rel="apple-touch-icon" sizes="167x167" href="icon-167.png">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{color-scheme:dark}
+body{background:#0B1220;color:#D8E4F2;font-family:-apple-system,system-ui,'Segoe UI',sans-serif;min-height:100vh;min-height:100dvh;overscroll-behavior:none}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+#app{max-width:430px;margin:0 auto}
+.view{padding-bottom:60px}
+
+/* ── Header ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;
+  padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-left:20px;padding-right:20px}
+.hdr-sub{font-size:11px;color:#5E7A94;text-transform:uppercase;letter-spacing:.09em}
+.hdr-title{font-size:22px;font-weight:800;margin-top:2px}
+.hdr-right{display:flex;gap:8px}
+.ibtn{background:#141E30;border:1px solid #1E304A;border-radius:10px;color:#D8E4F2;font-size:21px;
+  width:40px;height:40px;display:flex;align-items:center;justify-content:center}
+.ibtn:disabled{opacity:.25;cursor:default}
+
+/* ── Month nav ── */
+.mnav{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 12px}
+.mlbl{font-size:15px;font-weight:700;text-transform:capitalize}
+
+/* ── Calendar grid ── */
+.cal{padding:0 12px}
+.dow-row{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px}
+.dow{text-align:center;font-size:10px;font-weight:700;color:#5E7A94;text-transform:uppercase;letter-spacing:.04em;padding:3px 0}
+.dow.wknd{color:#E07A5F}
+.dgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+
+/* Day cells – base */
+.dc{background:#141E30;border:1.5px solid #1E304A;border-radius:11px;padding:6px 2px 5px;
+  display:flex;flex-direction:column;align-items:center;min-height:62px;gap:0}
+
+/* Past/today logged */
+.dc.active{background:rgba(90,141,240,.13);border-color:rgba(90,141,240,.45)}
+.dc.today{border-color:#5A8DF0!important}
+
+/* Future days – unlogged: date number slightly muted, otherwise normal */
+.dc.future .dn{color:#7A90A8}
+
+/* Future days – planned (has hours): amber dashed to signal "plan not actual" */
+.dc.future.active{
+  background:rgba(245,166,35,.10);
+  border-color:rgba(245,166,35,.50);
+  border-style:dashed;
+}
+.dc.future.active .dh{color:#F5A623}
+.dc.future.active .de{color:#F5A623}
+
+/* Day cell text */
+.dn{font-size:13px;font-weight:500;color:#D8E4F2;line-height:1}
+.dc.today .dn{color:#5A8DF0;font-weight:800}
+.dc.wknd .dn{color:#E07A5F}
+.dc.future.wknd .dn{color:#C0634A}
+.dh{font-size:12px;font-weight:700;color:#5A8DF0;line-height:1;margin-top:4px}
+.de{font-size:10px;color:#3DD6AC;line-height:1;margin-top:2px}
+.dp{font-size:18px;color:#2A3A52;line-height:1;margin-top:4px}
+/* "plan" badge on future planned cells */
+.dplan{font-size:8px;color:#F5A623;font-weight:700;letter-spacing:.03em;margin-top:1px}
+
+/* ── Summary bar ── */
+.summ{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;padding:12px 12px 0}
+.sc{background:#141E30;border-radius:15px;padding:13px 8px;border:1px solid #1E304A;text-align:center}
+.sv{font-size:23px;font-weight:800;line-height:1}
+.sv.g{color:#3DD6AC}
+.sl{font-size:10px;color:#5E7A94;text-transform:uppercase;letter-spacing:.07em;margin-top:4px}
+.rbadge{margin:9px 12px 0;background:#141E30;border-radius:11px;padding:8px 14px;
+  border:1px solid #1E304A;text-align:center;color:#5E7A94;font-size:13px}
+
+/* ── Settings ── */
+.shdr{display:flex;align-items:center;gap:12px;
+  padding-top:calc(env(safe-area-inset-top,0px) + 22px);padding-left:20px;padding-right:20px;padding-bottom:18px}
+.shdr h2{margin:0;font-size:20px;font-weight:700}
+.sbody{padding:0 18px;display:flex;flex-direction:column;gap:13px}
+.scard{background:#141E30;border-radius:17px;padding:18px;border:1px solid #1E304A}
+.clbl{color:#5E7A94;font-size:11px;text-transform:uppercase;letter-spacing:.09em;margin-bottom:10px}
+.rinrow{display:flex;align-items:center;gap:10px}
+.rin{flex:1;background:#0B1220;border:1px solid #1E304A;border-radius:12px;color:#D8E4F2;
+  font-size:26px;font-weight:700;padding:10px 14px;outline:none;width:100%}
+.rsym{color:#5A8DF0;font-size:21px;font-weight:700}
+.curlist{display:flex;flex-direction:column;gap:7px}
+.copt{background:#0B1220;border:1.5px solid #1E304A;border-radius:11px;color:#D8E4F2;
+  font-size:15px;padding:12px 15px;display:flex;justify-content:space-between;align-items:center}
+.copt.sel{background:rgba(90,141,240,.15);border-color:#5A8DF0;color:#5A8DF0;font-weight:700}
+.svbtn{background:#5A8DF0;border:none;border-radius:13px;color:#fff;
+  font-size:17px;font-weight:700;padding:15px;width:100%}
+
+/* ── Statistics ── */
+.chart-wrap{margin:10px 12px 0;background:#141E30;border-radius:16px;border:1px solid #1E304A;padding:14px 10px 8px}
+.tbl-wrap{margin:10px 12px 0;background:#141E30;border-radius:16px;border:1px solid #1E304A;overflow:hidden}
+.stbl{width:100%;border-collapse:collapse;font-size:13px}
+.stbl th,.stbl td{padding:9px 12px;text-align:right}
+.stbl th:first-child,.stbl td:first-child{text-align:left}
+.stbl th{color:#5E7A94;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+  border-bottom:1px solid #1E304A;padding:11px 12px}
+.stbl tbody tr{cursor:pointer}
+.stbl tbody td{border-bottom:1px solid rgba(30,48,74,.4)}
+.stbl tbody tr:last-child td{border-bottom:none}
+.stbl tfoot td{border-top:1px solid #1E304A;font-weight:700;
+  padding:11px 12px;background:rgba(90,141,240,.07)}
+
+/* ── Modal ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);
+  display:flex;align-items:flex-end;justify-content:center;z-index:100}
+.sheet{background:#1A2742;border-radius:24px 24px 0 0;
+  padding:16px 20px calc(env(safe-area-inset-bottom,0px) + 44px);
+  width:100%;max-width:430px;
+  border-top:1px solid #1E304A;border-left:1px solid #1E304A;border-right:1px solid #1E304A}
+.drag{width:34px;height:4px;background:#2A3A52;border-radius:2px;margin:0 auto 18px}
+.mdate{text-align:center;color:#5E7A94;font-size:13px;text-transform:capitalize}
+.mtitle{text-align:center;font-size:18px;font-weight:700;margin-top:4px;margin-bottom:16px}
+
+/* Plan badge inside modal */
+.plan-badge{
+  display:block;width:fit-content;margin:6px auto 0;
+  background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.4);
+  border-radius:20px;color:#F5A623;font-size:11px;font-weight:700;
+  padding:3px 12px;letter-spacing:.04em;
+}
+
+/* ── Mode toggle ── */
+.mtoggle{display:flex;background:#0B1220;border-radius:11px;padding:3px;margin-bottom:14px;gap:3px}
+.mbtn{flex:1;background:none;border:none;border-radius:9px;color:#5E7A94;
+  font-size:14px;font-weight:600;padding:9px;transition:.15s}
+.mbtn.on{background:#141E30;color:#D8E4F2}
+
+/* ── Hours mode ── */
+.hinrow{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.hin{flex:1;background:#0B1220;border:2px solid #5A8DF0;border-radius:15px;color:#D8E4F2;
+  font-size:40px;font-weight:800;padding:11px 16px;outline:none;text-align:center}
+.hlbl{font-size:19px;color:#5E7A94;font-weight:600;flex-shrink:0}
+.presets{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}
+.pre{background:#0B1220;border:1px solid #1E304A;border-radius:10px;
+  color:#D8E4F2;font-size:16px;font-weight:600;padding:11px 0}
+.pre.on{background:#5A8DF0;border-color:#5A8DF0;color:#fff}
+
+/* ── Range mode ── */
+.rrow{display:flex;align-items:flex-end;gap:10px;margin-bottom:12px}
+.rfield{flex:1;display:flex;flex-direction:column;gap:5px}
+.rlbl{font-size:11px;color:#5E7A94;text-align:center;text-transform:uppercase;letter-spacing:.08em}
+.tmin{background:#0B1220;border:2px solid #5A8DF0;border-radius:13px;color:#D8E4F2;
+  font-size:22px;font-weight:700;padding:11px 8px;outline:none;text-align:center;
+  width:100%;color-scheme:dark}
+.rdash{font-size:22px;color:#5E7A94;padding-bottom:11px;flex-shrink:0}
+
+/* ── Preview & actions ── */
+.prev{text-align:center;color:#3DD6AC;font-size:16px;font-weight:600;margin-bottom:12px}
+.mactions{display:grid;grid-template-columns:1fr 2fr;gap:9px}
+.clrbtn{background:#0B1220;border:1px solid #1E304A;border-radius:13px;
+  color:#5E7A94;font-size:15px;font-weight:600;padding:14px}
+.savbtn{background:#5A8DF0;border:none;border-radius:13px;color:#fff;
+  font-size:16px;font-weight:700;padding:14px}
+.savbtn.plan{background:#F5A623}
+
+/* ── Profile ── */
+.av{width:40px;height:40px;border-radius:50%;object-fit:cover;display:block}
+.ibtn.av-btn{padding:0;overflow:hidden}
+.prof{display:flex;flex-direction:column;align-items:center;text-align:center}
+.prof-av{width:74px;height:74px;border-radius:50%;object-fit:cover;border:2px solid #1E304A;background:#0B1220}
+.prof-name{font-size:18px;font-weight:800;margin-top:10px}
+.prof-mail{font-size:13px;color:#5E7A94;margin-top:2px}
+.sync-row{display:flex;align-items:center;justify-content:center;gap:7px;
+  font-size:12px;color:#5E7A94;margin-top:9px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#3DD6AC;flex-shrink:0}
+.sync-dot.off{background:#5E7A94}
+.sync-dot.busy{background:#F5A623}
+.seg{display:flex;background:#0B1220;border-radius:11px;padding:3px;gap:3px;margin-top:18px}
+.seg button{flex:1;background:none;border:none;border-radius:9px;color:#5E7A94;
+  font-size:14px;font-weight:700;padding:10px;transition:.15s}
+.seg button.on{background:#141E30;color:#D8E4F2}
+.signout{background:rgba(224,122,95,.12);border:1px solid rgba(224,122,95,.35);
+  border-radius:13px;color:#E07A5F;font-size:16px;font-weight:700;padding:14px;width:100%;margin-top:16px}
+.signin{background:#5A8DF0;border:none;border-radius:13px;color:#fff;font-size:16px;
+  font-weight:700;padding:15px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px}
+
+/* ── Sheet drag & expand ── */
+.sheet{overflow-y:auto;max-height:78dvh;transition:max-height .38s cubic-bezier(.32,.72,0,1)}
+.sheet.expanded{max-height:93dvh}
+.drag-wrap{padding:10px 0 2px;display:flex;justify-content:center;cursor:grab;margin-top:-10px}
+
+/* ── Extra options ── */
+.extra-trigger{display:block;width:100%;background:none;border:none;
+  color:#E07A5F;font-size:14px;font-weight:700;padding:12px 0 2px;text-align:center;letter-spacing:.02em}
+.extra-panel{overflow:hidden;max-height:0;opacity:0;
+  transition:max-height .38s cubic-bezier(.32,.72,0,1),opacity .22s ease}
+.sheet.expanded .extra-panel{max-height:440px;opacity:1}
+.extra-section{padding-top:14px;border-top:1px solid #1E304A;margin-top:6px}
+.extra-clbl{font-size:11px;color:#5E7A94;text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px}
+.ot-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ot-inp{flex:1;background:#0B1220;border:2px solid #F5A623;border-radius:12px;
+  color:#D8E4F2;font-size:26px;font-weight:700;padding:10px 14px;outline:none;text-align:center}
+.ot-lbl{font-size:13px;color:#5E7A94;font-weight:600;white-space:nowrap}
+.mult-row{display:flex;gap:6px;margin-bottom:8px}
+.mult-btn{flex:1;background:#0B1220;border:1.5px solid #1E304A;border-radius:10px;
+  color:#D8E4F2;font-size:14px;font-weight:600;padding:10px 0}
+.mult-btn.on{background:rgba(245,166,35,.15);border-color:#F5A623;color:#F5A623}
+.ot-prev{text-align:center;color:#F5A623;font-size:13px;font-weight:600;padding:4px 0 6px}
+
+/* ── Light theme ── */
+html.light{color-scheme:light}
+html.light body{background:#F0F4FA;color:#1A2742}
+html.light .ibtn{background:#E8EEF7;border-color:#C8D4E8;color:#1A2742}
+html.light .dc{background:#fff;border-color:#DDE4EE}
+html.light .dc.active{background:rgba(74,125,240,.09);border-color:rgba(74,125,240,.4)}
+html.light .dc .dn{color:#1A2742}
+html.light .dc.future .dn{color:#8A9BB0}
+html.light .dc .dp{color:#B8C8D8}
+html.light .sc{background:#fff;border-color:#DDE4EE}
+html.light .sl{color:#6B7F96}
+html.light .rbadge{background:#fff;border-color:#DDE4EE;color:#6B7F96}
+html.light .hdr-sub{color:#6B7F96}
+html.light .mlbl{color:#1A2742}
+html.light .dow{color:#6B7F96}
+html.light .chart-wrap,html.light .tbl-wrap{background:#fff;border-color:#DDE4EE}
+html.light .stbl th{color:#6B7F96;border-bottom-color:#DDE4EE}
+html.light .stbl tbody td{border-bottom-color:rgba(180,196,216,.4)}
+html.light .stbl tfoot td{background:rgba(74,125,240,.06);border-top-color:#DDE4EE}
+html.light .scard{background:#fff;border-color:#DDE4EE}
+html.light .clbl{color:#6B7F96}
+html.light .rin{background:#F0F4FA;border-color:#DDE4EE;color:#1A2742}
+html.light .rsym{color:#4A7DF0}
+html.light .copt{background:#F7F9FC;border-color:#DDE4EE;color:#1A2742}
+html.light .copt.sel{background:rgba(74,125,240,.1);border-color:#4A7DF0;color:#4A7DF0}
+html.light .overlay{background:rgba(0,0,0,.45)}
+html.light .sheet{background:#fff;border-color:#DDE4EE}
+html.light .drag{background:#C8D4E4}
+html.light .mdate{color:#6B7F96}
+html.light .mtitle{color:#1A2742}
+html.light .mtoggle{background:#F0F4FA}
+html.light .mbtn{color:#6B7F96}
+html.light .mbtn.on{background:#fff;color:#1A2742}
+html.light .hin{background:#F0F4FA;border-color:#4A7DF0;color:#1A2742}
+html.light .tmin{background:#F0F4FA;border-color:#4A7DF0;color:#1A2742}
+html.light .pre{background:#F0F4FA;border-color:#DDE4EE;color:#1A2742}
+html.light .pre.on{background:#4A7DF0;border-color:#4A7DF0;color:#fff}
+html.light .clrbtn{background:#F0F4FA;border-color:#DDE4EE;color:#6B7F96}
+html.light .hlbl,.light .rlbl,.light .rdash{color:#6B7F96}
+html.light .extra-trigger{color:#C0634A}
+html.light .extra-section{border-top-color:#DDE4EE}
+html.light .extra-clbl{color:#6B7F96}
+html.light .ot-inp{background:#F0F4FA;color:#1A2742}
+html.light .mult-btn{background:#F7F9FC;border-color:#DDE4EE;color:#1A2742}
+html.light .mult-btn.on{background:rgba(245,166,35,.1);border-color:#F5A623;color:#C07A00}
+html.light .prof-av{border-color:#DDE4EE;background:#F0F4FA}
+html.light .prof-name{color:#1A2742}
+html.light .prof-mail{color:#6B7F96}
+html.light .sync-row{color:#6B7F96}
+html.light .seg{background:#F0F4FA}
+html.light .seg button{color:#6B7F96}
+html.light .seg button.on{background:#fff;color:#1A2742}
+html.light .signout{background:rgba(192,99,74,.09);border-color:rgba(192,99,74,.3)}
+
+/* ── Collapsible section headers ── */
+.sec-hdr{display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none}
+.sec-arr{color:#5A8DF0;font-size:17px;font-weight:700;background:none;border:none;padding:0;cursor:pointer;line-height:1}
+/* ── Calendar connected badge ── */
+.cal-hdr-row{display:flex;justify-content:space-between;align-items:center}
+.cal-badge{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.cal-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
+/* ── Profile lang seg: allow wrapping for many languages ── */
+.seg{flex-wrap:wrap}
+.seg button{min-width:40px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  deleteField,
+  onSnapshot,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBSw70eKBDUDYZkMGvF961sjoMFHwWd-KM",
+  authDomain: "workh-cdc4d.firebaseapp.com",
+  projectId: "workh-cdc4d",
+  storageBucket: "workh-cdc4d.firebasestorage.app",
+  messagingSenderId: "775094572168",
+  appId: "1:775094572168:web:d25ad278fa785621cbbb3d",
+  measurementId: "G-0P46Q6EYTJ"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
+const calendarScope = 'https://www.googleapis.com/auth/calendar.events.owned';
+function createGoogleProvider(addCalendarScope=false) {
+  const p = new GoogleAuthProvider();
+  if (addCalendarScope) p.addScope(calendarScope);
+  return p;
+}
+
+let currentUser = null;   // raw Firebase user
+let unsub       = null;   // Firestore snapshot unsubscribe
+let pushTimer   = null;   // debounce timer for cloud writes
+let pendingDeletes = {};  // { 'YYYY-MM': Set(['5','12']) } days removed since last push
+let calToken    = null;   // Google OAuth access token (Calendar scope), session-only
+let calExp      = 0;      // ms timestamp when calToken expires
+
+function setCalendarError(code) {
+  if (window.__app && window.__app.setCalendarError) window.__app.setCalendarError(code || null);
+}
+
+// ── Sign in (popup, with redirect fallback for installed PWAs) ──────────────
+async function signIn() {
+  try {
+    const result = await signInWithPopup(auth, createGoogleProvider(false));
+    saveCalToken(result);
+  } catch (e) {
+    const fallback = [
+      'auth/popup-blocked',
+      'auth/operation-not-supported-in-this-environment',
+      'auth/cancelled-popup-request'
+    ];
+    if (fallback.includes(e.code)) {
+      try { await signInWithRedirect(auth, createGoogleProvider(false)); } catch (_) {}
+    } else if (e.code !== 'auth/popup-closed-by-user') {
+      console.error('Sign-in error:', e);
+    }
+  }
+}
+
+function saveCalToken(result) {
+  try {
+    const cred = GoogleAuthProvider.credentialFromResult(result);
+    if (cred && cred.accessToken) {
+      calToken = cred.accessToken;
+      calExp = Date.now() + 55 * 60 * 1000; // Google tokens last ~60min, refresh a bit early
+      setCalendarError(null);
+    }
+  } catch (_) {}
+}
+
+// Re-prompt Google consent to get a fresh Calendar access token (popup, user-gesture only)
+async function ensureCalendarAccess() {
+  setCalendarError(null);
+  if (calToken && Date.now() < calExp) return true;
+  try {
+    const result = await signInWithPopup(auth, createGoogleProvider(true));
+    saveCalToken(result);
+    return !!calToken;
+  } catch (e) {
+    console.error('Calendar consent failed:', e);
+    setCalendarError(e.code || 'calendarAuthFailed');
+    return false;
+  }
+}
+
+function signOutUser() {
+  if (unsub) { unsub(); unsub = null; }
+  calToken = null; calExp = 0;
+  return signOut(auth);
+}
+
+// ── Push local state to the cloud (debounced) ──────────────────────────────
+function recordDelete(mo, day) {
+  if (!pendingDeletes[mo]) pendingDeletes[mo] = new Set();
+  pendingDeletes[mo].add(String(day));
+}
+
+function push(state) {
+  if (!currentUser) return;
+  window.__app.setSync('busy');
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async () => {
+    const deletes = pendingDeletes;
+    pendingDeletes = {};
+    try {
+      const ref = doc(db, 'users', currentUser.uid);
+      // merge:true only adds/overwrites fields — it never removes a nested
+      // map key that's missing from the update, so deleted days would
+      // silently reappear from the cloud. Push the regular update first...
+      await setDoc(
+        ref,
+        { cfg: state.cfg, data: state.data, ot: state.ot||{}, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+      // ...then explicitly delete the fields for any day the user cleared.
+      const delPatch = {};
+      for (const mo in deletes) {
+        for (const day of deletes[mo]) delPatch[`data.${mo}.${day}`] = deleteField();
+      }
+      if (Object.keys(delPatch).length) await updateDoc(ref, delPatch);
+      window.__app.setSync('idle');
+    } catch (e) {
+      console.error('Cloud write failed:', e);
+      // put deletions back so the next push retries them
+      for (const mo in deletes) {
+        if (!pendingDeletes[mo]) pendingDeletes[mo] = new Set();
+        deletes[mo].forEach(d => pendingDeletes[mo].add(d));
+      }
+      window.__app.setSync('off');
+    }
+  }, 600);
+}
+
+// ── Calendar sync (writes a Calendar event per logged/planned day) ─────────
+const CAL_API = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+
+function addHoursToTime(hhmm, hours) {
+  const [h, m] = hhmm.split(':').map(Number);
+  let total = h * 60 + m + Math.round(hours * 60);
+  total = ((total % 1440) + 1440) % 1440;
+  const eh = Math.floor(total / 60), em = total % 60;
+  return `${String(eh).padStart(2,'0')}:${String(em).padStart(2,'0')}`;
+}
+function timeMinutes(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+}
+function nextDateStr(ymd) {
+  const [y,m,d] = ymd.split('-').map(Number);
+  const nd = new Date(y, m - 1, d + 1);
+  return `${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+}
+
+async function calFetch(url, opts) {
+  const ok = await ensureCalendarAccess();
+  if (!ok) return null;
+  const res = await fetch(url, {
+    ...opts,
+    headers: { ...(opts && opts.headers), Authorization: `Bearer ${calToken}` }
+  });
+  if (res.status === 401) { calToken = null; calExp = 0; return null; } // stale token
+  if (res.status === 204) return {};
+  if (!res.ok) setCalendarError(`calendarApi:${res.status}`);
+  return res.ok ? res.json() : null;
+}
+
+async function upsertCalendarEvent({ mo, day, from, to, title, notes, calId, colorId }) {
+  const date = `${mo}-${String(day).padStart(2,'0')}`;
+  const endDate = timeMinutes(to) <= timeMinutes(from) ? nextDateStr(date) : date;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const body = {
+    summary: title,
+    description: notes,
+    start: { dateTime: `${date}T${from}:00`, timeZone: tz },
+    end:   { dateTime: `${endDate}T${to}:00`, timeZone: tz }
+  };
+  if (colorId) body.colorId = String(colorId);
+  try {
+    const data = calId
+      ? await calFetch(`${CAL_API}/${calId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) })
+      : await calFetch(CAL_API, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    return data ? data.id : null;
+  } catch (e) { console.error('Calendar write failed:', e); return null; }
+}
+
+async function deleteCalendarEvent(calId) {
+  if (!calId) return;
+  try { await calFetch(`${CAL_API}/${calId}`, { method: 'DELETE' }); }
+  catch (e) { console.error('Calendar delete failed:', e); }
+}
+
+window.__fb = {
+  signIn, signOut: signOutUser, push, recordDelete,
+  ensureCalendarAccess, upsertCalendarEvent, deleteCalendarEvent
+};
+
+// Complete any pending redirect sign-in (PWA / mobile)
+getRedirectResult(auth).then(result => { if (result) saveCalToken(result); })
+  .catch(e => console.error('Redirect result:', e));
+
+// ── React to auth changes ───────────────────────────────────────────────────
+onAuthStateChanged(auth, async user => {
+  if (unsub) { unsub(); unsub = null; }
+
+  if (!user) {
+    currentUser = null;
+    window.__app.setUser(null);
+    return;
+  }
+
+  currentUser = user;
+  window.__app.setUser({
+    uid:   user.uid,
+    name:  user.displayName,
+    email: user.email,
+    photo: user.photoURL
+  });
+  window.__app.setSync('busy');
+
+  const ref = doc(db, 'users', user.uid);
+  try {
+    // 1. Pull cloud doc and merge it with whatever is already local
+    const snap   = await getDoc(ref);
+    const merged = window.__app.mergeRemote(snap.exists() ? snap.data() : null);
+
+    // 2. Write the merged result back so the cloud is complete
+    await setDoc(
+      ref,
+      { cfg: merged.cfg, data: merged.data, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+    window.__app.setSync('idle');
+
+    // 3. Listen for changes made on other devices (ignore our own writes)
+    unsub = onSnapshot(ref, s => {
+      if (s.metadata.hasPendingWrites) return;
+      if (s.exists()) window.__app.mergeRemote(s.data());
+    }, err => {
+      console.error('Snapshot error:', err);
+      window.__app.setSync('off');
+    });
+  } catch (e) {
+    console.error('Initial sync failed:', e);
+    window.__app.setSync('off');
+  }
+});
+</script>
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const CUR = {
+  USD:{s:'$'},
+  EUR:{s:'€'},
+  GBP:{s:'£'},
+  PLN:{s:'zł'},
+  UAH:{s:'₴'},
+  RUB:{s:'₽'},
+  KZT:{s:'₸'},
+  TRY:{s:'₺'},
+  CAD:{s:'C$'},
+  AUD:{s:'A$'},
+  CHF:{s:'Fr'},
+  JPY:{s:'¥'},
+  CNY:{s:'元'},
+  CZK:{s:'Kč'},
+  NOK:{s:'kr'},
+};
+
+// ── i18n ───────────────────────────────────────────────────────────────────
+const LANGS = ['en','ru','pl','uk','de','fr','es','tr','it','kk'];
+const LANGNAME = { en:'English', ru:'Русский', pl:'Polski', uk:'Українська', de:'Deutsch', fr:'Français', es:'Español', tr:'Türkçe', it:'Italiano', kk:'Қазақша' };
+const LOCALE   = { en:'en-US', ru:'ru-RU', pl:'pl-PL', uk:'uk-UA', de:'de-DE', fr:'fr-FR', es:'es-ES', tr:'tr-TR', it:'it-IT', kk:'kk-KZ' };
+
+const I18N = {
+  en: {
+    sub:'Time tracking', work:'Working days', stats:'Statistics', settings:'Settings',
+    rate:'Hourly rate', currency:'Currency', language:'Language', save:'Save',
+    days:'Days', hours:'Hours', perHour:'/hr', earnings:'Earnings', month:'Month', total:'Total',
+    planning:'Planning', planHours:'Plan hours', hoursWorked:'How many hours worked?',
+    manual:'Manual', byTime:'By time', hShort:'h', from:'From', to:'To',
+    clear:'Clear', plan:'Plan', planBadge:'plan',
+    profile:'Profile', signIn:'Sign in with Google', signOut:'Sign out',
+    notSignedIn:'Not signed in', synced:'Synced', syncing:'Syncing…', syncOff:'Offline',
+    yearSuffix:'',
+    calendarSync:'Calendar sync', on:'On', off:'Off',
+    calendarNeedsSignIn:'Sign in with Google first', calTitle:'Work',
+    calendarAuthFailed:'Calendar access was blocked. Add this Google account as an OAuth test user or publish and verify the app in Google Cloud.',
+    exportData:'Export data', exportYear:'Export year (CSV)', exportBackup:'Full backup (JSON)',
+    overtime:'Overtime',overtimeH:'OT hours',overtimeMult:'Extra rate (%)',overtimeFrom:'OT Start',otOverlap:'OT overlaps work — will start at',
+    additionalOpts:'Additional options',theme:'Theme',themeDark:'Dark',themeLight:'Light',
+    dow:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    cur:{USD:'US Dollar',EUR:'Euro',GBP:'British Pound',PLN:'Polish Zloty',UAH:'Ukrainian Hryvnia',RUB:'Russian Ruble',KZT:'Kazakhstani Tenge',TRY:'Turkish Lira',CAD:'Canadian Dollar',AUD:'Australian Dollar',CHF:'Swiss Franc',JPY:'Japanese Yen',CNY:'Chinese Yuan',CZK:'Czech Koruna',NOK:'Norwegian Krone'}
+  },
+  ru: {
+    sub:'Учёт часов', work:'Рабочие дни', stats:'Статистика', settings:'Настройки',
+    rate:'Ставка в час', currency:'Валюта', language:'Язык', save:'Сохранить',
+    days:'Дней', hours:'Часов', perHour:'/час', earnings:'Заработок', month:'Месяц', total:'Итого',
+    planning:'Планирование', planHours:'Запланировать часы', hoursWorked:'Сколько часов отработано?',
+    manual:'Вручную', byTime:'По времени', hShort:'ч', from:'С', to:'До',
+    clear:'Очистить', plan:'Запланировать', planBadge:'план',
+    profile:'Профиль', signIn:'Войти через Google', signOut:'Выйти',
+    notSignedIn:'Вход не выполнен', synced:'Синхронизировано', syncing:'Синхронизация…', syncOff:'Не в сети',
+    yearSuffix:' год',
+    calendarSync:'Синхронизация с календарём', on:'Вкл', off:'Выкл',
+    calendarNeedsSignIn:'Сначала войдите через Google', calTitle:'Работа',
+    calendarAuthFailed:'Доступ к календарю заблокирован. Добавьте аккаунт Google как тестового пользователя OAuth или опубликуйте приложение в Google Cloud.',
+    exportData:'Экспорт данных', exportYear:'Экспорт года (CSV)', exportBackup:'Полный бэкап (JSON)',
+    overtime:'Сверхурочные',overtimeH:'Доп. часы',overtimeMult:'Доп. ставка (%)',overtimeFrom:'Начало СУ',otOverlap:'СУ пересекаются с работой — начало сдвинуто на',
+    additionalOpts:'Дополнительные опции',theme:'Тема',themeDark:'Тёмная',themeLight:'Светлая',
+    dow:['Пн','Вт','Ср','Чт','Пт','Сб','Вс'],
+    cur:{USD:'Доллар',EUR:'Евро',GBP:'Фунт',PLN:'Злотый',UAH:'Гривна',RUB:'Рубль',KZT:'Тенге',TRY:'Лира',CAD:'Кан. доллар',AUD:'Австр. доллар',CHF:'Франк',JPY:'Иена',CNY:'Юань',CZK:'Крона',NOK:'Норв. крона'}
+  },
+  pl: {
+    sub:'Śledzenie czasu', work:'Dni robocze', stats:'Statystyki', settings:'Ustawienia',
+    rate:'Stawka godzinowa', currency:'Waluta', language:'Język', save:'Zapisz',
+    days:'Dni', hours:'Godziny', perHour:'/godz', earnings:'Zarobek', month:'Miesiąc', total:'Razem',
+    planning:'Planowanie', planHours:'Zaplanuj godziny', hoursWorked:'Ile godzin przepracowano?',
+    manual:'Ręcznie', byTime:'Wg czasu', hShort:'h', from:'Od', to:'Do',
+    clear:'Wyczyść', plan:'Zaplanuj', planBadge:'plan',
+    profile:'Profil', signIn:'Zaloguj przez Google', signOut:'Wyloguj się',
+    notSignedIn:'Nie zalogowano', synced:'Zsynchronizowano', syncing:'Synchronizacja…', syncOff:'Offline',
+    yearSuffix:' rok',
+    calendarSync:'Synchronizacja z kalendarzem', on:'Wł', off:'Wył',
+    calendarNeedsSignIn:'Najpierw zaloguj się przez Google', calTitle:'Praca',
+    calendarAuthFailed:'Dostęp do kalendarza zablokowany. Dodaj konto Google jako użytkownika testowego OAuth lub opublikuj aplikację w Google Cloud.',
+    exportData:'Eksport danych', exportYear:'Eksport roku (CSV)', exportBackup:'Pełny backup (JSON)',
+    overtime:'Nadgodziny',overtimeH:'Godz. extra',overtimeMult:'Stawka extra (%)',overtimeFrom:'Pocz. nadg.',otOverlap:'Nadgodziny nakładają się — start od',
+    additionalOpts:'Dodatkowe opcje',theme:'Motyw',themeDark:'Ciemny',themeLight:'Jasny',
+    dow:['Pon','Wt','Śr','Czw','Pt','Sob','Nd'],
+    cur:{USD:'Dolar',EUR:'Euro',GBP:'Funt',PLN:'Złoty',UAH:'Hrywna',RUB:'Rubel',KZT:'Tenge',TRY:'Lira',CAD:'Dolar kanad.',AUD:'Dolar austral.',CHF:'Frank',JPY:'Jen',CNY:'Juan',CZK:'Korona',NOK:'Korona norw.'}
+  },
+  uk: {
+    sub:'Облік часу', work:'Робочі дні', stats:'Статистика', settings:'Налаштування',
+    rate:'Ставка за годину', currency:'Валюта', language:'Мова', save:'Зберегти',
+    days:'Днів', hours:'Годин', perHour:'/год', earnings:'Заробіток', month:'Місяць', total:'Разом',
+    planning:'Планування', planHours:'Запланувати години', hoursWorked:'Скільки годин відпрацьовано?',
+    manual:'Вручну', byTime:'За часом', hShort:'г', from:'З', to:'До',
+    clear:'Очистити', plan:'Запланувати', planBadge:'план',
+    profile:'Профіль', signIn:'Увійти через Google', signOut:'Вийти',
+    notSignedIn:'Не авторизовано', synced:'Синхронізовано', syncing:'Синхронізація…', syncOff:'Офлайн',
+    yearSuffix:' рік',
+    calendarSync:'Синхронізація з календарем', on:'Увімк', off:'Вимк',
+    calendarNeedsSignIn:'Спочатку увійдіть через Google', calTitle:'Робота',
+    calendarAuthFailed:'Доступ до календаря заблоковано. Додайте цей обліковий запис Google як тестового користувача OAuth або опублікуйте додаток у Google Cloud.',
+    exportData:'Експорт даних', exportYear:'Рік (CSV)', exportBackup:'Повний бекап (JSON)',
+    overtime:'Понаднормові',overtimeH:'Дод. години',overtimeMult:'Дод. ставка (%)',overtimeFrom:'Поч. ПН',otOverlap:'ПН перетинаються — початок зміщено на',
+    additionalOpts:'Додаткові опції',theme:'Тема',themeDark:'Темна',themeLight:'Світла',
+    dow:['Пн','Вт','Ср','Чт','Пт','Сб','Нд'],
+    cur:{USD:'Долар',EUR:'Євро',GBP:'Фунт',PLN:'Злотий',UAH:'Гривня',RUB:'Рубль',KZT:'Тенге',TRY:'Ліра',CAD:'Кан. долар',AUD:'Авст. долар',CHF:'Франк',JPY:'Єна',CNY:'Юань',CZK:'Крона',NOK:'Норв. крона'}
+  },
+  de: {
+    sub:'Zeiterfassung', work:'Arbeitstage', stats:'Statistiken', settings:'Einstellungen',
+    rate:'Stundensatz', currency:'Währung', language:'Sprache', save:'Speichern',
+    days:'Tage', hours:'Stunden', perHour:'/Std', earnings:'Verdienst', month:'Monat', total:'Gesamt',
+    planning:'Planung', planHours:'Stunden planen', hoursWorked:'Wie viele Stunden gearbeitet?',
+    manual:'Manuell', byTime:'Nach Zeit', hShort:'h', from:'Von', to:'Bis',
+    clear:'Löschen', plan:'Planen', planBadge:'plan',
+    profile:'Profil', signIn:'Mit Google anmelden', signOut:'Abmelden',
+    notSignedIn:'Nicht angemeldet', synced:'Synchronisiert', syncing:'Synchronisiere…', syncOff:'Offline',
+    yearSuffix:'',
+    calendarSync:'Kalender-Sync', on:'Ein', off:'Aus',
+    calendarNeedsSignIn:'Zuerst mit Google anmelden', calTitle:'Arbeit',
+    calendarAuthFailed:'Kalenderzugriff wurde blockiert. Fügen Sie dieses Google-Konto als OAuth-Testnutzer hinzu oder veröffentlichen Sie die App in der Google Cloud.',
+    exportData:'Daten exportieren', exportYear:'Jahr exportieren (CSV)', exportBackup:'Vollständiges Backup (JSON)',
+    overtime:'Überstunden',overtimeH:'ÜS-Stunden',overtimeMult:'Extra-Satz (%)',overtimeFrom:'ÜS-Beginn',otOverlap:'ÜS überschneidet sich — Beginn auf',
+    additionalOpts:'Weitere Optionen',theme:'Thema',themeDark:'Dunkel',themeLight:'Hell',
+    dow:['Mo','Di','Mi','Do','Fr','Sa','So'],
+    cur:{USD:'US-Dollar',EUR:'Euro',GBP:'Brit. Pfund',PLN:'Poln. Zloty',UAH:'Ukr. Hrywnja',RUB:'Russ. Rubel',KZT:'Kasach. Tenge',TRY:'Türk. Lira',CAD:'Kanad. Dollar',AUD:'Austral. Dollar',CHF:'Schweizer Franken',JPY:'Japan. Yen',CNY:'Chin. Yuan',CZK:'Tschech. Krone',NOK:'Norweg. Krone'}
+  },
+  fr: {
+    sub:'Suivi du temps', work:'Jours de travail', stats:'Statistiques', settings:'Paramètres',
+    rate:'Taux horaire', currency:'Devise', language:'Langue', save:'Enregistrer',
+    days:'Jours', hours:'Heures', perHour:'/h', earnings:'Gains', month:'Mois', total:'Total',
+    planning:'Planification', planHours:'Planifier les heures', hoursWorked:"Combien d'heures travaillées ?",
+    manual:'Manuel', byTime:'Par horaire', hShort:'h', from:'De', to:'À',
+    clear:'Effacer', plan:'Planifier', planBadge:'plan',
+    profile:'Profil', signIn:'Se connecter avec Google', signOut:'Se déconnecter',
+    notSignedIn:'Non connecté', synced:'Synchronisé', syncing:'Synchronisation…', syncOff:'Hors ligne',
+    yearSuffix:'',
+    calendarSync:'Sync calendrier', on:'Activé', off:'Désactivé',
+    calendarNeedsSignIn:"Connectez-vous d'abord avec Google", calTitle:'Travail',
+    calendarAuthFailed:"L'accès au calendrier a été bloqué. Ajoutez ce compte Google comme utilisateur test OAuth ou publiez l'application dans Google Cloud.",
+    exportData:'Exporter les données', exportYear:"Exporter l'année (CSV)", exportBackup:'Sauvegarde complète (JSON)',
+    overtime:'Heures sup.',overtimeH:'Heures HS',overtimeMult:'Taux extra (%)',overtimeFrom:'Début HS',otOverlap:'HS se chevauche — début décalé à',
+    additionalOpts:'Options supplémentaires',theme:'Thème',themeDark:'Sombre',themeLight:'Clair',
+    dow:['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'],
+    cur:{USD:'Dollar US',EUR:'Euro',GBP:'Livre sterling',PLN:'Zloty polonais',UAH:'Hryvnia ukrainienne',RUB:'Rouble russe',KZT:'Tenge kazakh',TRY:'Livre turque',CAD:'Dollar canadien',AUD:'Dollar australien',CHF:'Franc suisse',JPY:'Yen japonais',CNY:'Yuan chinois',CZK:'Couronne tchèque',NOK:'Couronne norvégienne'}
+  },
+  es: {
+    sub:'Control de tiempo', work:'Días laborables', stats:'Estadísticas', settings:'Ajustes',
+    rate:'Tarifa por hora', currency:'Moneda', language:'Idioma', save:'Guardar',
+    days:'Días', hours:'Horas', perHour:'/h', earnings:'Ingresos', month:'Mes', total:'Total',
+    planning:'Planificación', planHours:'Planificar horas', hoursWorked:'¿Cuántas horas trabajadas?',
+    manual:'Manual', byTime:'Por horario', hShort:'h', from:'Desde', to:'Hasta',
+    clear:'Borrar', plan:'Planificar', planBadge:'plan',
+    profile:'Perfil', signIn:'Iniciar sesión con Google', signOut:'Cerrar sesión',
+    notSignedIn:'No conectado', synced:'Sincronizado', syncing:'Sincronizando…', syncOff:'Sin conexión',
+    yearSuffix:'',
+    calendarSync:'Sync de calendario', on:'Activo', off:'Inactivo',
+    calendarNeedsSignIn:'Inicia sesión con Google primero', calTitle:'Trabajo',
+    calendarAuthFailed:'El acceso al calendario fue bloqueado. Añada esta cuenta de Google como usuario de prueba OAuth o publique la app en Google Cloud.',
+    exportData:'Exportar datos', exportYear:'Exportar año (CSV)', exportBackup:'Copia de seguridad (JSON)',
+    overtime:'Horas extra',overtimeH:'Horas HE',overtimeMult:'Tarifa extra (%)',overtimeFrom:'Inicio HE',otOverlap:'HE se superpone — inicio movido a',
+    additionalOpts:'Opciones adicionales',theme:'Tema',themeDark:'Oscuro',themeLight:'Claro',
+    dow:['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
+    cur:{USD:'Dólar US',EUR:'Euro',GBP:'Libra esterlina',PLN:'Esloti polaco',UAH:'Grivna ucraniana',RUB:'Rublo ruso',KZT:'Tenge kazajo',TRY:'Lira turca',CAD:'Dólar canadiense',AUD:'Dólar australiano',CHF:'Franco suizo',JPY:'Yen japonés',CNY:'Yuan chino',CZK:'Corona checa',NOK:'Corona noruega'}
+  },
+  tr: {
+    sub:'Zaman takibi', work:'Çalışma günleri', stats:'İstatistikler', settings:'Ayarlar',
+    rate:'Saatlik ücret', currency:'Para birimi', language:'Dil', save:'Kaydet',
+    days:'Gün', hours:'Saat', perHour:'/saat', earnings:'Kazanç', month:'Ay', total:'Toplam',
+    planning:'Planlama', planHours:'Saatleri planla', hoursWorked:'Kaç saat çalışıldı?',
+    manual:'Manuel', byTime:'Saate göre', hShort:'s', from:'İtibaren', to:'Kadar',
+    clear:'Temizle', plan:'Planla', planBadge:'plan',
+    profile:'Profil', signIn:'Google ile giriş yap', signOut:'Çıkış yap',
+    notSignedIn:'Giriş yapılmadı', synced:'Senkronize', syncing:'Senkronize ediliyor…', syncOff:'Çevrimdışı',
+    yearSuffix:'',
+    calendarSync:'Takvim senkronizasyonu', on:'Açık', off:'Kapalı',
+    calendarNeedsSignIn:'Önce Google ile giriş yapın', calTitle:'Çalışma',
+    calendarAuthFailed:"Takvim erişimi engellendi. Bu Google hesabını OAuth test kullanıcısı olarak ekleyin veya uygulamayı Google Cloud'da yayınlayın.",
+    exportData:'Verileri dışa aktar', exportYear:'Yılı dışa aktar (CSV)', exportBackup:'Tam yedek (JSON)',
+    overtime:'Fazla mesai',overtimeH:'FM saatleri',overtimeMult:'Ekstra oran (%)',overtimeFrom:'FM başlangıcı',otOverlap:'FM çakışıyor — başlangıç kaydırıldı',
+    additionalOpts:'Ek seçenekler',theme:'Tema',themeDark:'Koyu',themeLight:'Açık',
+    dow:['Pzt','Sal','Çrş','Per','Cum','Cmt','Paz'],
+    cur:{USD:'ABD doları',EUR:'Euro',GBP:'İngiliz sterlini',PLN:'Polonya zlotisi',UAH:'Ukrayna grivnası',RUB:'Rus rublesi',KZT:'Kazak tengesi',TRY:'Türk lirası',CAD:'Kanada doları',AUD:'Avustralya doları',CHF:'İsviçre frankı',JPY:'Japon yeni',CNY:'Çin yuanı',CZK:'Çek kronası',NOK:'Norveç kronası'}
+  },
+  it: {
+    sub:'Monitoraggio ore', work:'Giorni lavorativi', stats:'Statistiche', settings:'Impostazioni',
+    rate:'Tariffa oraria', currency:'Valuta', language:'Lingua', save:'Salva',
+    days:'Giorni', hours:'Ore', perHour:'/ora', earnings:'Guadagni', month:'Mese', total:'Totale',
+    planning:'Pianificazione', planHours:'Pianifica ore', hoursWorked:'Quante ore lavorate?',
+    manual:'Manuale', byTime:'Per orario', hShort:'h', from:'Da', to:'A',
+    clear:'Cancella', plan:'Pianifica', planBadge:'piano',
+    profile:'Profilo', signIn:'Accedi con Google', signOut:'Disconnetti',
+    notSignedIn:'Non connesso', synced:'Sincronizzato', syncing:'Sincronizzazione…', syncOff:'Offline',
+    yearSuffix:'',
+    calendarSync:'Sync calendario', on:'Attivo', off:'Disattivo',
+    calendarNeedsSignIn:'Accedi prima con Google', calTitle:'Lavoro',
+    calendarAuthFailed:"Accesso al calendario bloccato. Aggiungi questo account Google come utente test OAuth o pubblica l'app in Google Cloud.",
+    exportData:'Esporta dati', exportYear:'Esporta anno (CSV)', exportBackup:'Backup completo (JSON)',
+    overtime:'Straordinari',overtimeH:'Ore straord.',overtimeMult:'Tariffa extra (%)',overtimeFrom:'Inizio straord.',otOverlap:'Straord. si sovrappone — inizio spostato a',
+    additionalOpts:'Opzioni aggiuntive',theme:'Tema',themeDark:'Scuro',themeLight:'Chiaro',
+    dow:['Lun','Mar','Mer','Gio','Ven','Sab','Dom'],
+    cur:{USD:'Dollaro US',EUR:'Euro',GBP:'Sterlina brit.',PLN:'Zloty polacco',UAH:'Grivna ucraina',RUB:'Rublo russo',KZT:'Tenge kazako',TRY:'Lira turca',CAD:'Dollaro canadese',AUD:'Dollaro australiano',CHF:'Franco svizzero',JPY:'Yen giapponese',CNY:'Yuan cinese',CZK:'Corona ceca',NOK:'Corona norvegese'}
+  },
+  kk: {
+    sub:'Уақытты бақылау', work:'Жұмыс күндері', stats:'Статистика', settings:'Баптаулар',
+    rate:'Сағаттық ставка', currency:'Валюта', language:'Тіл', save:'Сақтау',
+    days:'Күн', hours:'Сағат', perHour:'/сағ', earnings:'Табыс', month:'Ай', total:'Барлығы',
+    planning:'Жоспарлау', planHours:'Сағат жоспарлау', hoursWorked:'Неше сағат жұмыс істелді?',
+    manual:'Қолмен', byTime:'Уақыт бойынша', hShort:'с', from:'Бастап', to:'Дейін',
+    clear:'Тазалау', plan:'Жоспарлау', planBadge:'жоспар',
+    profile:'Профиль', signIn:'Google арқылы кіру', signOut:'Шығу',
+    notSignedIn:'Кіру жасалмаған', synced:'Синхрондалды', syncing:'Синхрондалуда…', syncOff:'Желісіз',
+    yearSuffix:' жыл',
+    calendarSync:'Күнтізбемен синхрондау', on:'Қосу', off:'Өшіру',
+    calendarNeedsSignIn:'Алдымен Google арқылы кіріңіз', calTitle:'Жұмыс',
+    calendarAuthFailed:'Күнтізбеге қатынасу бұғатталды. Бұл Google тіркелгісін OAuth тест пайдаланушысы ретінде қосыңыз немесе қосымшаны Google Cloud-та жариялаңыз.',
+    exportData:'Деректерді экспорттау', exportYear:'Жылды экспорттау (CSV)', exportBackup:'Толық сақтық көшірме (JSON)',
+    overtime:'Артық сағат',overtimeH:'Артық сағ.',overtimeMult:'Қосымша мөлш. (%)',overtimeFrom:'АС басталуы',otOverlap:'АС қабаттасады — басталуы жылжытылды',
+    additionalOpts:'Қосымша опциялар',theme:'Тақырып',themeDark:'Күңгірт',themeLight:'Жарық',
+    dow:['Дс','Сс','Ср','Бс','Жм','Сб','Жс'],
+    cur:{USD:'АҚШ доллары',EUR:'Еуро',GBP:'Британ фунты',PLN:'Польша злотысы',UAH:'Украина гривнасы',RUB:'Ресей рублі',KZT:'Қазақстан теңгесі',TRY:'Түрік лирасы',CAD:'Канада доллары',AUD:'Австралия доллары',CHF:'Швейцария франкі',JPY:'Жапон иенасы',CNY:'Қытай юані',CZK:'Чех кронасы',NOK:'Норвегия кронасы'}
+  }
+};
+function L()    { return I18N[S.cfg.lang] || I18N.en; }
+function t(k)   { return L()[k]; }
+function calendarErrorText() {
+  if (!S.calError) return '';
+  if (String(S.calError).startsWith('calendarApi:')) {
+    return `Google Calendar API error ${String(S.calError).split(':')[1]}. Check OAuth consent, Calendar API, and API restrictions in Google Cloud.`;
+  }
+  return L().calendarAuthFailed || I18N.en.calendarAuthFailed;
+}
+function loc()  { return LOCALE[S.cfg.lang] || 'en-US'; }
+function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g,
+  c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+const SK = 'wh_v2';
+const DEFAULT_OT_PCT = 150;
+
+// ── State ──────────────────────────────────────────────────────────────────
+let S = {
+  view:    'main',   // main | settings | stats
+  cfg:     { rate:25, cur:'PLN', lang:'en', calSync:false, theme:'dark' },
+  mo:      moKey(),
+  data:    {},       // { 'YYYY-MM': { day: hours } }
+  ot:      {},       // { 'YYYY-MM': { day: { h: overtime_hours, pct: overtime_rate_percent } } }
+  calIds:  {},       // { 'YYYY-MM': { day: googleCalendarEventId } } — local only
+  modal:   null,
+  dcfg:    null,
+  yearKey: new Date().getFullYear(),
+  sMode:   'hours',  // stats chart toggle: hours | earnings
+  user:    null,     // { uid, name, email, photo }
+  profile: false,    // profile sheet open?
+  sync:    'off',    // off | idle | busy
+  calError: null,
+  termsAccepted: false,
+};
+let applyingRemote = false; // guard so cloud-applied changes don't bounce back
+
+// ── Persistence ────────────────────────────────────────────────────────────
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(SK) || '{}');
+    if (d.cfg)    S.cfg    = { ...S.cfg, ...d.cfg };
+    if (d.data)   S.data   = d.data;
+    if (d.calIds) S.calIds = d.calIds;
+    if (d.ot)     S.ot     = d.ot;
+    if (d.termsAccepted) S.termsAccepted = true;
+  } catch(e) {}
+}
+function save() {
+  try {
+    localStorage.setItem(SK, JSON.stringify({
+      cfg: S.cfg,
+      data: S.data,
+      calIds: S.calIds,
+      ot: S.ot,
+      termsAccepted: S.termsAccepted
+    }));
+  } catch(e) {}
+  if (!applyingRemote && window.__fb && S.user) {
+    window.__fb.push({ cfg:S.cfg, data:S.data, ot:S.ot });
+  }
+}
+
+// ── Cloud bridge (called from the Firebase module) ──────────────────────────
+window.__app = {
+  setUser(u) {
+    S.user = u;
+    if (!u) { S.sync = 'off'; S.profile = false; }
+    render();
+  },
+  setSync(s) {
+    S.sync = s;
+    if (S.profile) render();   // only the profile sheet shows sync state
+  },
+  setCalendarError(code) {
+    S.calError = code;
+    if (S.view === 'settings') render();
+  },
+  getState() { return { cfg:S.cfg, data:S.data }; },
+  // Union-merge remote data into local. Cloud value wins on a conflicting day.
+  mergeRemote(remote) {
+    if (remote) {
+      applyingRemote = true;
+      if (remote.cfg)  S.cfg = { ...S.cfg, ...remote.cfg };
+      if (remote.data) {
+        for (const mk in remote.data) {
+          S.data[mk] = { ...(S.data[mk]||{}), ...remote.data[mk] };
+        }
+      }
+      if (remote.ot) {
+        for (const mk in remote.ot) {
+          S.ot[mk] = { ...(S.ot[mk]||{}), ...remote.ot[mk] };
+        }
+      }
+      save();
+      applyingRemote = false;
+      render();
+    }
+    return { cfg:S.cfg, data:S.data };
+  }
+};
+
+// ── Date helpers ───────────────────────────────────────────────────────────
+function p2(n) { return String(n).padStart(2,'0'); }
+function moKey(d=new Date()) { return `${d.getFullYear()}-${p2(d.getMonth()+1)}`; }
+function moShift(k,d) { const[y,m]=k.split('-').map(Number); return moKey(new Date(y,m-1+d,1)); }
+function moLabel(k) {
+  const[y,m]=k.split('-');
+  return new Date(+y,+m-1,1).toLocaleDateString(loc(),{month:'long',year:'numeric'});
+}
+function daysIn(k)    { const[y,m]=k.split('-').map(Number); return new Date(y,m,0).getDate(); }
+function firstDow(k)  { const[y,m]=k.split('-').map(Number); return(new Date(y,m-1,1).getDay()+6)%7; }
+function isToday(k,d) {
+  const t=new Date(),[y,m]=k.split('-').map(Number);
+  return t.getFullYear()===y&&t.getMonth()+1===m&&t.getDate()===d;
+}
+function isWknd(k,d)   { const[y,m]=k.split('-').map(Number); return[0,6].includes(new Date(y,m-1,d).getDay()); }
+function isFuture(k,d) {
+  const[y,m]=k.split('-').map(Number);
+  const t=new Date();
+  return new Date(y,m-1,d) > new Date(t.getFullYear(),t.getMonth(),t.getDate());
+}
+function fullDate(k,d) {
+  const[y,m]=k.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString(loc(),{weekday:'long',day:'numeric',month:'long'});
+}
+function timeToMin(hhmm) { if(!hhmm) return 0; const[h,m]=hhmm.split(':').map(Number); return h*60+m; }
+function calcRange(a,b) {
+  if(!a||!b) return 0;
+  const[ah,am]=a.split(':').map(Number),[bh,bm]=b.split(':').map(Number);
+  let min=(bh*60+bm)-(ah*60+am); if(min<0)min+=1440;
+  return Math.round(min/60*100)/100;
+}
+
+// ── Entries ────────────────────────────────────────────────────────────────
+function ents()        { return S.data[S.mo]||{}; }
+function setEnt(d,h)   { if(!S.data[S.mo])S.data[S.mo]={}; S.data[S.mo][d]=h; save(); }
+function delEnt(d)     {
+  if(S.data[S.mo]) delete S.data[S.mo][d];
+  if(S.calIds[S.mo]) delete S.calIds[S.mo][d];
+  if(window.__fb && window.__fb.recordDelete) window.__fb.recordDelete(S.mo, d);
+  save();
+}
+
+// ── Format helpers ─────────────────────────────────────────────────────────
+function fmt(n)        { return n%1===0?n:n.toFixed(1); }
+function fmtBig(e)     { return e>=10000?`${(e/1000).toFixed(1)}k`:Math.round(e); }
+function fmtCell(e)    { return e>=1000?`${(e/1000).toFixed(1)}k`:Math.round(e); }
+function otPct(o) {
+  if (o && o.pct !== undefined) return Math.min(Math.max(parseFloat(o.pct)||0, 0), 1000);
+  if (o && o.mult !== undefined) return Math.min(Math.max((parseFloat(o.mult)||0) * 100, 0), 1000);
+  return DEFAULT_OT_PCT;
+}
+function otHours(o) {
+  if (!o) return 0;
+  if (o.from && o.to) return calcRange(o.from, o.to);
+  return Math.min(parseFloat(o.h)||0, 24);
+}
+function otEnd(o) {
+  if (!o) return '';
+  if (o.to) return o.to;
+  if (o.from && o.h) return addH(o.from, parseFloat(o.h)||0);
+  return '';
+}
+function otEarn(o) { return o ? otHours(o) * (otPct(o)/100) * S.cfg.rate : 0; }
+
+// ── MAIN VIEW ──────────────────────────────────────────────────────────────
+function rMain() {
+  const e=ents(), sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const dc=daysIn(S.mo), fd=firstDow(S.mo);
+
+  const cells=[];
+  for(let i=0;i<fd;i++) cells.push(0);
+  for(let d=1;d<=dc;d++) cells.push(d);
+  while(cells.length%7) cells.push(0);
+
+  const dow = L().dow.map((d,i)=>`<div class="dow${i>=5?' wknd':''}">${d}</div>`).join('');
+  const hs = L().hShort;
+
+  const otMo=S.ot[S.mo]||{};
+  const grid = cells.map(d=>{
+    if(!d) return '<div></div>';
+    const h=e[d], has=h!==undefined;
+    const today=isToday(S.mo,d), fut=isFuture(S.mo,d), wk=isWknd(S.mo,d);
+    const otDay=otMo[d];
+    const otH=otHours(otDay);
+    const earned=has?(h*S.cfg.rate+otEarn(otDay)):0;
+    return `<button class="dc${has?' active':''}${today?' today':''}${wk?' wknd':''}${fut?' future':''}"
+      onclick="openDay(${d})">
+      <span class="dn">${d}</span>
+      ${has
+        ? `<span class="dh">${h}${hs}${otH>0?`<span style="color:#F5A623;font-size:9px"> +${otH}</span>`:''}</span>
+           ${h>0?`<span class="de">${fmtCell(earned)}${sym}</span>`:''}
+           ${fut?`<span class="dplan">${t('planBadge')}</span>`:''}`
+        : '<span class="dp">+</span>'}
+    </button>`;
+  }).join('');
+
+  const th=Object.values(e).reduce((a,h)=>a+h,0);
+  const ote=Object.values(otMo).reduce((a,o)=>a+otEarn(o),0);
+  const te=th*S.cfg.rate+ote;
+  const wd=Object.keys(e).length;
+
+  const profBtn = (S.user && S.user.photo)
+    ? `<button class="ibtn av-btn" title="${t('profile')}" onclick="openProfile()"><img class="av" src="${esc(S.user.photo)}" referrerpolicy="no-referrer" alt=""></button>`
+    : `<button class="ibtn" title="${t('profile')}" onclick="openProfile()">👤</button>`;
+
+  return `<div class="view">
+    <div class="hdr">
+      <div><div class="hdr-sub">${t('sub')}</div><div class="hdr-title">Shiftly</div></div>
+     <div class="hdr-right">
+  ${profBtn}
+  <button class="ibtn" title="${t('stats')}" onclick="openStats()">📊</button>
+  <button class="ibtn" title="${t('settings')}" onclick="openCfg()">⚙</button>
+      </div>
+    </div>
+    <div class="mnav">
+      <button class="ibtn" onclick="goMo(-1)">‹</button>
+      <span class="mlbl">${moLabel(S.mo)}</span>
+      <button class="ibtn" onclick="goMo(1)">›</button>
+    </div>
+    <div class="cal">
+      <div class="dow-row">${dow}</div>
+      <div class="dgrid">${grid}</div>
+    </div>
+    <div class="summ">
+      <div class="sc"><div class="sv">${wd}</div><div class="sl">${t('days')}</div></div>
+      <div class="sc"><div class="sv">${fmt(th)}</div><div class="sl">${t('hours')}</div></div>
+      <div class="sc"><div class="sv g">${fmtBig(te)}</div><div class="sl">${sym}</div></div>
+    </div>
+    <div class="rbadge">${S.cfg.rate} ${sym}${t('perHour')}</div>
+  </div>`;
+}
+
+// ── STATS VIEW ─────────────────────────────────────────────────────────────
+function getYearData(year) {
+  return Array.from({length:12},(_,i)=>{
+    const mk=`${year}-${p2(i+1)}`;
+    const e=S.data[mk]||{};
+    const h=Object.values(e).reduce((a,v)=>a+v,0);
+    const otMo=S.ot[mk]||{};
+    const ote=Object.values(otMo).reduce((a,o)=>a+otEarn(o),0);
+    return { mk, days:Object.keys(e).length, hours:h, earnings:h*S.cfg.rate+ote };
+  });
+}
+
+function rStats() {
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const yd=getYearData(S.yearKey);
+  const totH=yd.reduce((a,d)=>a+d.hours,0);
+  const totE=yd.reduce((a,d)=>a+d.earnings,0);
+  const totD=yd.reduce((a,d)=>a+d.days,0);
+
+  // ── SVG bar chart ──
+  const vals=yd.map(d=>S.sMode==='hours'?d.hours:d.earnings);
+  const maxV=Math.max(...vals,1);
+  const W=330,H=140,PB=22,PT=16;
+  const bw=W/12;
+
+  const bars=yd.map((d,i)=>{
+    const v=vals[i];
+    const bh=Math.max((v/maxV)*(H-PT-PB),v>0?4:0);
+    const x=i*bw+bw*0.1, w=bw*0.8, y=H-PB-bh;
+    const isCur=d.mk===moKey();
+    const col=v>0?(isCur?'#3DD6AC':'#5A8DF0'):'#1E304A';
+    const mName=new Date(+d.mk.split('-')[0],+d.mk.split('-')[1]-1,1)
+      .toLocaleDateString(loc(),{month:'short'}).replace('.','');
+    const lbl=v>0?(S.sMode==='hours'?v.toFixed(0):(v>=1000?`${(v/1000).toFixed(0)}k`:Math.round(v))):'';
+    return `<g onclick="barClick(${i})" style="cursor:pointer">
+      <rect x="${x}" y="${y}" width="${w}" height="${bh}" fill="${col}" rx="3"/>
+      ${v>0?`<text x="${x+w/2}" y="${y-3}" text-anchor="middle" font-size="8" fill="${col}">${lbl}</text>`:''}
+      <text x="${x+w/2}" y="${H-5}" text-anchor="middle" font-size="9"
+        fill="${isCur?'#3DD6AC':'#5E7A94'}" font-weight="${isCur?700:400}">${mName}</text>
+    </g>`;
+  }).join('');
+
+  // ── Table rows ──
+  const rows=yd.map(d=>{
+    const mn=new Date(+d.mk.split('-')[0],+d.mk.split('-')[1]-1,1)
+      .toLocaleDateString(loc(),{month:'long'});
+    const isCur=d.mk===moKey();
+    const isEmpty=d.hours===0&&d.days===0;
+    return `<tr style="opacity:${isEmpty?.35:1}" onclick="jumpToMonth('${d.mk}')">
+      <td style="text-transform:capitalize${isCur?';color:#3DD6AC;font-weight:700':''}">${mn}</td>
+      <td>${d.days||'—'}</td>
+      <td>${d.hours>0?fmt(d.hours):'—'}</td>
+      <td style="color:#3DD6AC">${d.earnings>0?`${fmtBig(d.earnings)}${sym}`:'—'}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="view">
+    <div class="hdr">
+      <button class="ibtn" onclick="S.view='main';render()">←</button>
+      <div style="text-align:center">
+        <div class="hdr-sub">${t('sub')}</div>
+        <div class="hdr-title">${t('stats')}</div>
+      </div>
+      <button class="ibtn" title="${t('exportYear')}" onclick="exportYearCSV()">⬇</button>
+    </div>
+    <div class="mnav">
+      <button class="ibtn" onclick="goYear(-1)">‹</button>
+      <span class="mlbl">${S.yearKey}${t('yearSuffix')}</span>
+      <button class="ibtn" onclick="goYear(1)">›</button>
+    </div>
+    <div class="summ">
+      <div class="sc"><div class="sv">${totD}</div><div class="sl">${t('days')}</div></div>
+      <div class="sc"><div class="sv">${fmt(totH)}</div><div class="sl">${t('hours')}</div></div>
+      <div class="sc"><div class="sv g">${fmtBig(totE)}</div><div class="sl">${sym}</div></div>
+    </div>
+    <div class="chart-wrap">
+      <div class="mtoggle" style="margin-bottom:12px">
+        <button class="mbtn${S.sMode==='hours'?' on':''}"    onclick="S.sMode='hours';render()">${t('hours')}</button>
+        <button class="mbtn${S.sMode==='earnings'?' on':''}" onclick="S.sMode='earnings';render()">${t('earnings')}</button>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block">${bars}</svg>
+    </div>
+    <div class="tbl-wrap">
+      <table class="stbl">
+        <thead><tr><th>${t('month')}</th><th>${t('days')}</th><th>${t('hours')}</th><th>${t('earnings')}</th></tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td>${t('total')}</td><td>${totD}</td><td>${fmt(totH)}</td>
+          <td style="color:#3DD6AC">${fmtBig(totE)}${sym}</td>
+        </tr></tfoot>
+      </table>
+    </div>
+  </div>`;
+}
+
+// ── SETTINGS VIEW ──────────────────────────────────────────────────────────
+function rSettings() {
+  const d=S.dcfg, sym=CUR[d.cur]?.s||d.cur;
+
+  // Calendar connected indicator
+  const calConnected = d.calSync && !!S.user;
+  const calDotColor  = calConnected ? '#3DD6AC' : '#5E7A94';
+  const calStatusTxt = calConnected ? t('synced') : t('off');
+
+  // Collapsible currency list
+  const curOpen  = !!d.curOpen;
+  const visCurs  = curOpen ? Object.entries(CUR) : Object.entries(CUR).filter(([c])=>c===d.cur);
+  const clist = visCurs.map(([c,i])=>
+    `<button class="copt${d.cur===c?' sel':''}" onclick="selCur('${c}')">
+      <span>${L().cur[c]||c}</span><span>${i.s} ${c}</span>
+    </button>`).join('');
+
+  // Collapsible language list
+  const langOpen = !!d.langOpen;
+  const visLangs = langOpen ? LANGS : [S.cfg.lang];
+  const llist = visLangs.map(l=>
+    `<button class="copt${S.cfg.lang===l?' sel':''}" onclick="setLang('${l}')">
+      <span>${LANGNAME[l]}</span><span>${l.toUpperCase()}</span>
+    </button>`).join('');
+
+  return `<div class="view">
+    <div class="shdr"><button class="ibtn" onclick="closeCfg()">←</button><h2>${t('settings')}</h2></div>
+    <div class="sbody">
+      <div class="scard">
+        <div class="clbl">${t('rate')}</div>
+        <div class="rinrow">
+          <input type="number" id="rin" class="rin" value="${d.rate}" oninput="dRate(this.value)">
+          <span class="rsym">${sym}</span>
+        </div>
+      </div>
+      <div class="scard">
+        <div class="sec-hdr" onclick="toggleCurList()">
+          <span class="clbl" style="margin-bottom:0">${t('currency')}</span>
+          <span class="sec-arr">${curOpen?'▴':'▾'}</span>
+        </div>
+        <div class="curlist" style="margin-top:10px">${clist}</div>
+      </div>
+      <div class="scard">
+        <div class="sec-hdr" onclick="toggleLangList()">
+          <span class="clbl" style="margin-bottom:0">${t('language')}</span>
+          <span class="sec-arr">${langOpen?'▴':'▾'}</span>
+        </div>
+        <div class="curlist" style="margin-top:10px">${llist}</div>
+      </div>
+      <div class="scard">
+        <div class="clbl">${t('theme')}</div>
+        <div class="mtoggle">
+          <button class="mbtn${(d.theme||'dark')==='dark'?' on':''}" onclick="setTheme('dark')">${t('themeDark')}</button>
+          <button class="mbtn${d.theme==='light'?' on':''}" onclick="setTheme('light')">${t('themeLight')}</button>
+        </div>
+      </div>
+      <div class="scard">
+        <div class="cal-hdr-row">
+          <span class="clbl" style="margin-bottom:0">${t('calendarSync')}</span>
+          <span class="cal-badge" style="color:${calDotColor}">
+            <span class="cal-dot" style="background:${calDotColor}"></span>${calStatusTxt}
+          </span>
+        </div>
+        <div class="mtoggle" style="margin-top:10px">
+          <button class="mbtn${!d.calSync?' on':''}" onclick="toggleCalSync(false)">${t('off')}</button>
+          <button class="mbtn${d.calSync?' on':''}" onclick="toggleCalSync(true)">${t('on')}</button>
+        </div>
+        ${!S.user?`<div style="color:#5E7A94;font-size:12px;margin-top:9px">${t('calendarNeedsSignIn')}</div>`:''}
+        ${S.calError?`<div style="color:#E07A5F;font-size:12px;line-height:1.35;margin-top:9px">${esc(calendarErrorText())}</div>`:''}
+      </div>
+      <div class="scard">
+        <div class="clbl">${t('exportData')}</div>
+        <button class="svbtn" style="background:#141E30;border:1px solid #1E304A" onclick="exportBackupJSON()">${t('exportBackup')}</button>
+      </div>
+      <div class="scard">
+        <div class="clbl">Legal</div>
+        <div class="curlist">
+          <button class="copt" onclick="openLegal('terms')">Terms of Use</button>
+          <button class="copt" onclick="openLegal('privacy')">Privacy Policy</button>
+        </div>
+      </div>
+      <button class="svbtn" onclick="saveCfg()">${t('save')}</button>
+    </div>
+  </div>`;
+}
+
+// ── MODAL ──────────────────────────────────────────────────────────────────
+function rModal() {
+  const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const isH=m.mode==='h';
+  const fut=isFuture(S.mo,m.day);
+  const ph=isH?(parseFloat(m.h)||0):calcRange(m.from,m.to);
+  const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
+  const otH=otHours(otData);
+  const otRate=otPct(otData);
+  const pe=ph*S.cfg.rate + otEarn(otData);
+  const workEnd=isH?addH(m.from||'09:00',ph):(m.to||'17:00');
+  const otFrom=(otData&&otData.from)||workEnd;
+  const otTo=otEnd(otData)||addH(otFrom,otH);
+  const prev=(ph>0||otH>0)
+    ?`<div class="prev">${ph}${L().hShort}${otH>0?` +${otH}OT`:''} = ${pe.toFixed(0)} ${sym}</div>`:'';
+  const psets=[4,5,6,7,8].map(h=>
+    `<button class="pre${m.h===String(h)?' on':''}" onclick="setP(${h})">${h}</button>`).join('');
+  const multOpts=[125,150,200].map(v=>
+    `<button class="mult-btn${otRate===v?' on':''}" onclick="setOTPct(${v})">${v}%</button>`).join('');
+
+  return `<div class="overlay" onclick="ovClick(event)">
+    <div class="sheet${m.extraOpen?' expanded':''}" id="daySheet">
+      <div class="drag-wrap" id="dragHandle"><div class="drag" style="margin:0"></div></div>
+      <div class="mdate">${fullDate(S.mo,m.day)}</div>
+      ${fut?`<span class="plan-badge">📋 ${t('planning')}</span>`:''}
+      <div class="mtitle">${fut?t('planHours'):t('hoursWorked')}</div>
+      <div class="mtoggle">
+        <button class="mbtn${isH?' on':''}"  onclick="setMode('h')">${t('manual')}</button>
+        <button class="mbtn${!isH?' on':''}" onclick="setMode('r')">${t('byTime')}</button>
+      </div>
+      ${isH?`
+        <div class="hinrow">
+          <input type="number" id="hin" class="hin" value="${m.h}" placeholder="0"
+            min="0" max="24" step="0.5" oninput="setH(this.value)">
+          <span class="hlbl">${L().hShort}</span>
+        </div>
+        <div class="presets">${psets}</div>
+      `:`
+        <div class="rrow">
+          <div class="rfield">
+            <div class="rlbl">${t('from')}</div>
+            <input type="time" id="tfrom" class="tmin" value="${m.from}" oninput="setFrom(this.value)">
+          </div>
+          <div class="rdash">—</div>
+          <div class="rfield">
+            <div class="rlbl">${t('to')}</div>
+            <input type="time" id="tto" class="tmin" value="${m.to}" oninput="setTo(this.value)">
+          </div>
+        </div>
+      `}
+      ${prev}
+      <div class="mactions">
+        <button class="clrbtn" onclick="clearDay()">${t('clear')}</button>
+        <button class="savbtn${fut?' plan':''}" onclick="saveDay()">
+          ${fut?t('plan'):t('save')}
+        </button>
+      </div>
+      <button class="extra-trigger" id="extraTrig" onclick="toggleExtra()">
+        ${t('additionalOpts')} ${m.extraOpen?'▴':'▾'}
+      </button>
+      <div class="extra-panel" id="extraPanel">
+        <div class="extra-section">
+          <div class="extra-clbl">${t('overtime')}</div>
+          <div class="rrow">
+            <div class="rfield">
+              <div class="rlbl">${t('from')}</div>
+              <input type="time" id="otFromInp" class="tmin" value="${otFrom}" oninput="setOTFrom(this.value)">
+            </div>
+            <div class=”rdash”>—</div>
+            <div class="rfield">
+              <div class="rlbl">${t('to')}</div>
+              <input type="time" id="otToInp" class="tmin" value="${otTo}" oninput="setOTTo(this.value)">
+            </div>
+          </div>
+          <div class="extra-clbl">${t('overtimeMult')}</div>
+          <div class="mult-row">${multOpts}</div>
+          <div class="ot-row">
+            <input type="number" id="otpct" class="ot-inp" value="${otRate||''}" placeholder="${DEFAULT_OT_PCT}"
+              min="0" max="1000" step="5" oninput="setOTPct(this.value)">
+            <span class="ot-lbl">%</span>
+          </div>
+          ${otH>0?`<div class="ot-prev">+${otH}${L().hShort} (${otFrom}-${otTo}) x ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}</div>`:''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────
+function render() {
+  document.documentElement.lang = S.cfg.lang;
+  const effectiveTheme = (S.view==='settings'&&S.dcfg) ? (S.dcfg.theme||'dark') : (S.cfg.theme||'dark');
+  document.documentElement.className = effectiveTheme==='light' ? 'light' : '';
+  const mc=document.querySelector('meta[name="theme-color"]');
+  if (mc) mc.content = effectiveTheme==='light' ? '#F0F4FA' : '#0B1220';
+  let html;
+  if (!S.termsAccepted) {
+    html = rTermsModal();
+    document.getElementById('app').innerHTML = html;
+    return;
+  }
+  if      (S.view==='settings') html=rSettings();
+  else if (S.view==='stats')    html=rStats();
+  else                          html=rMain();
+  if (S.modal)   html+=rModal();
+  if (S.profile) html+=rProfile();
+  document.getElementById('app').innerHTML=html;
+  if (S.modal) {
+    const inp=document.getElementById(S.modal.mode==='h'?'hin':'tfrom');
+    if (inp){ inp.focus(); if(S.modal.mode==='h')inp.select(); }
+    requestAnimationFrame(attachDrag);
+  }
+}
+
+// ── PROFILE SHEET ──────────────────────────────────────────────────────────
+function rTermsModal() {
+  const text = `By using this app, you agree to the Terms of Use and Privacy Policy.`;
+  return `<div class="overlay" onclick="void(0)">
+    <div class="sheet" style="padding:24px 20px 30px">
+      <div class="drag"></div>
+      <h2 style="font-size:22px;margin-bottom:12px">User agreement</h2>
+      <p style="color:#B8C8D8;font-size:15px;line-height:1.8;margin-bottom:16px">${text}</p>
+      <button class="svbtn" style="width:100%;margin-bottom:10px" onclick="openLegal('terms')">Read Terms of Use</button>
+      <button class="svbtn" style="width:100%;margin-bottom:18px;background:#141E30;border:1px solid #1E304A" onclick="openLegal('privacy')">Read Privacy Policy</button>
+      <button class="svbtn" onclick="acceptTerms()">I agree and continue</button>
+    </div>
+  </div>`;
+}
+
+function rProfile() {
+  const u=S.user;
+  const seg=LANGS.map(l=>
+    `<button class="${S.cfg.lang===l?'on':''}" onclick="setLang('${l}')">${l.toUpperCase()}</button>`).join('');
+
+  let body;
+  if (u) {
+    const dotCls = S.sync==='busy'?'busy':(S.sync==='idle'?'':'off');
+    const syncTxt= S.sync==='busy'?t('syncing'):(S.sync==='idle'?t('synced'):t('syncOff'));
+    const av = u.photo
+      ? `<img class="prof-av" src="${esc(u.photo)}" referrerpolicy="no-referrer" alt="">`
+      : `<div class="prof-av" style="display:flex;align-items:center;justify-content:center;font-size:34px">👤</div>`;
+    body=`
+      <div class="prof">
+        ${av}
+        <div class="prof-name">${esc(u.name)}</div>
+        <div class="prof-mail">${esc(u.email)}</div>
+        <div class="sync-row"><span class="sync-dot ${dotCls}"></span>${syncTxt}</div>
+      </div>
+      <div class="seg">${seg}</div>
+      <button class="signout" onclick="doSignOut()">${t('signOut')}</button>`;
+  } else {
+    body=`
+      <div class="prof">
+        <div class="prof-av" style="display:flex;align-items:center;justify-content:center;font-size:34px">👤</div>
+        <div class="prof-mail" style="margin-top:10px">${t('notSignedIn')}</div>
+      </div>
+      <div class="seg">${seg}</div>
+      <button class="signin" onclick="doSignIn()">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.9 29.3 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.3-.4-3.5z"/>
+          <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+          <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.5-5.2l-6.2-5.3C29.1 35.1 26.7 36 24 36c-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.5 39.6 16.2 44 24 44z"/>
+          <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4 5.5l6.2 5.3C39.9 36.7 44 31 44 24c0-1.2-.1-2.3-.4-3.5z"/>
+        </svg>
+        ${t('signIn')}
+      </button>`;
+  }
+
+  return `<div class="overlay" onclick="ovProfile(event)">
+    <div class="sheet">
+      <div class="drag"></div>
+      <div class="mtitle" style="margin-bottom:16px">${t('profile')}</div>
+      ${body}
+    </div>
+  </div>`;
+}
+
+// ── Live preview (no re-render) ────────────────────────────────────────────
+function updPrev() {
+  const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const ph=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
+  const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
+  const otH=otHours(otData);
+  const pe=ph*S.cfg.rate + otEarn(otData);
+  let el=document.querySelector('.prev');
+  if (ph>0||otH>0) {
+    if (!el){ el=document.createElement('div'); el.className='prev'; document.querySelector('.mactions').before(el); }
+    el.textContent=`${ph}${L().hShort}${otH>0?` +${otH}OT`:''} = ${pe.toFixed(0)} ${sym}`;
+  } else if (el) el.remove();
+}
+
+// ── Overtime ───────────────────────────────────────────────────────────────
+function setOT(v) {
+  const m=S.modal;
+  const h=Math.min(parseFloat(v)||0, 24);
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT};
+  S.ot[S.mo][m.day]={...ex,h};
+  updOTPrev();
+}
+function setOTPct(v) {
+  const m=S.modal;
+  const pct=Math.min(Math.max(parseFloat(v)||0, 0), 1000);
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT};
+  S.ot[S.mo][m.day]={...ex,pct};
+  document.querySelectorAll('.mult-btn').forEach(b=>
+    b.classList.toggle('on',parseFloat(b.textContent)===pct));
+  const pctInp=document.getElementById('otpct');
+  if (pctInp && pctInp.value !== String(pct)) pctInp.value=String(pct);
+  updOTPrev();
+}
+function setOTFrom(v) {
+  const m=S.modal;
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT};
+  const to=(document.getElementById('otToInp')?.value)||ex.to||addH(v, parseFloat(ex.h)||0);
+  S.ot[S.mo][m.day]={...ex,from:v,to,h:calcRange(v,to)};
+  updOTPrev();
+}
+function setOTTo(v) {
+  const m=S.modal;
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const ex=S.ot[S.mo][m.day]||{h:0,pct:DEFAULT_OT_PCT,from:''};
+  const from=ex.from||(document.getElementById('otFromInp')?.value)||v;
+  S.ot[S.mo][m.day]={...ex,from,to:v,h:calcRange(from,v)};
+  updOTPrev();
+}
+function updOTPrev() {
+  const m=S.modal, sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const otData=S.ot[S.mo]&&S.ot[S.mo][m.day];
+  const otH=otHours(otData);
+  const otRate=otPct(otData);
+  const otFrom=(otData&&otData.from)||'';
+  const otTo=otEnd(otData);
+  // check overlap with regular work
+  const ph=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
+  const workEnd=m.mode==='h'?addH(m.from||'09:00',ph):(m.to||'17:00');
+  const overlap=otFrom&&otH>0&&timeToMin(otFrom)<timeToMin(workEnd);
+  let warn=document.getElementById('otOverlapWarn');
+  if (overlap) {
+    if (!warn){
+      warn=document.createElement('div'); warn.id='otOverlapWarn';
+      warn.style.cssText='color:#E07A5F;font-size:11px;text-align:center;margin-bottom:6px';
+      const fromInp=document.getElementById('otFromInp');
+      if (fromInp) fromInp.closest('.rrow').before(warn);
+    }
+    warn.textContent=`⚠ ${t('otOverlap')} ${workEnd}`;
+  } else if (warn) warn.remove();
+  let el=document.querySelector('.ot-prev');
+  if (otH>0) {
+    if (!el){
+      el=document.createElement('div'); el.className='ot-prev';
+      const pctInp=document.getElementById('otpct');
+      const anchor=pctInp ? pctInp.closest('.ot-row') : document.querySelector('.mult-row');
+      if (anchor) anchor.after(el);
+    }
+    const timeRange=(otFrom&&otTo)?` (${otFrom}–${otTo})`:'';
+    el.textContent=`+${otH}${L().hShort}${timeRange} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
+  } else if (el) el.remove();
+  updPrev();
+}
+
+// ── Extra panel toggle & drag ──────────────────────────────────────────────
+function toggleExtra() {
+  S.modal.extraOpen = !S.modal.extraOpen;
+  const sheet=document.getElementById('daySheet');
+  if (sheet) sheet.classList.toggle('expanded', S.modal.extraOpen);
+  const trig=document.getElementById('extraTrig');
+  if (trig) trig.textContent=`${t('additionalOpts')} ${S.modal.extraOpen?'▴':'▾'}`;
+}
+function attachDrag() {
+  const handle=document.getElementById('dragHandle');
+  const sheet =document.getElementById('daySheet');
+  if (!handle||!sheet) return;
+  let startY=0;
+  handle.addEventListener('touchstart', e=>{ startY=e.touches[0].clientY; },{passive:true});
+  handle.addEventListener('touchend', e=>{
+    const dy=e.changedTouches[0].clientY-startY;
+    if (dy < -35 && !S.modal.extraOpen) {
+      S.modal.extraOpen=true;
+      sheet.classList.add('expanded');
+      const trig=document.getElementById('extraTrig');
+      if (trig) trig.textContent=`${t('additionalOpts')} ▴`;
+    } else if (dy > 35 && S.modal.extraOpen) {
+      S.modal.extraOpen=false;
+      sheet.classList.remove('expanded');
+      const trig=document.getElementById('extraTrig');
+      if (trig) trig.textContent=`${t('additionalOpts')} ▾`;
+    } else if (dy > 80 && !S.modal.extraOpen) {
+      S.modal=null; render();
+    }
+  },{passive:true});
+}
+
+// ── Theme ──────────────────────────────────────────────────────────────────
+function setTheme(th) {
+  if (S.dcfg) S.dcfg.theme=th;
+  render();
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────
+function goMo(d)       { S.mo=moShift(S.mo,d); render(); }
+
+function openDay(d)    {
+  const ex=ents()[d];
+  S.modal={day:d, mode:'h', h:ex!==undefined?String(ex):'', from:'09:00', to:'17:00', extraOpen:false};
+  render();
+}
+
+function ovClick(e)    { if(e.target.classList.contains('overlay')){ S.modal=null; render(); } }
+function openCfg()     { S.dcfg={...S.cfg, curOpen:false, langOpen:false}; S.view='settings'; render(); }
+function closeCfg()    { S.view='main'; render(); }
+function saveCfg()     { S.cfg={...S.dcfg}; save(); S.view='main'; render(); }
+function toggleCurList()  { S.dcfg.curOpen  = !S.dcfg.curOpen;  render(); }
+function toggleLangList() { S.dcfg.langOpen = !S.dcfg.langOpen; render(); }
+function dRate(v)      { S.dcfg.rate=parseFloat(v)||0; }
+function selCur(c)     { S.dcfg.cur=c; render(); const r=document.getElementById('rin'); if(r)r.value=S.dcfg.rate; }
+function setMode(m)    { S.modal.mode=m; render(); }
+function setH(v)       { S.modal.h=v; updPrev(); }
+function setFrom(v)    { S.modal.from=v; updPrev(); }
+function setTo(v)      { S.modal.to=v; updPrev(); }
+function setP(h)       {
+  S.modal.h=String(h);
+  const i=document.getElementById('hin'); if(i)i.value=h;
+  document.querySelectorAll('.pre').forEach(b=>b.classList.toggle('on',+b.textContent===h));
+  updPrev();
+}
+function addH(hhmm, hrs) {
+  const [h,m]=hhmm.split(':').map(Number);
+  let total=h*60+m+Math.round(hrs*60);
+  total=((total%1440)+1440)%1440;
+  return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
+}
+function syncToCalendar(day,h,from,to) {
+  if (!(S.cfg.calSync && S.user && window.__fb)) return Promise.resolve(null);
+  if (!S.calIds[S.mo]) S.calIds[S.mo]={};
+  const calId=S.calIds[S.mo][day];
+  if (h<=0) {
+    if (calId) { window.__fb.deleteCalendarEvent(calId); delete S.calIds[S.mo][day]; save(); }
+    return Promise.resolve(null);
+  }
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const title=`${t('calTitle')} · ${fmt(h)}${L().hShort}`;
+  const notes=`${t('earnings')}: ${fmt(h*S.cfg.rate)} ${sym}`;
+  return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId,colorId:'9'})
+    .then(id=>{ if(id){ S.calIds[S.mo][day]=id; save(); } });
+}
+function syncOTToCalendar(day, h, from, to) {
+  if (!(S.cfg.calSync && S.user && window.__fb)) return Promise.resolve(null);
+  if (!S.calIds[S.mo]) S.calIds[S.mo]={};
+  const calKey=`${day}_ot`;
+  const calId=S.calIds[S.mo][calKey];
+  if (h<=0) {
+    if (calId) { window.__fb.deleteCalendarEvent(calId); delete S.calIds[S.mo][calKey]; save(); }
+    return Promise.resolve(null);
+  }
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const otData=S.ot[S.mo]&&S.ot[S.mo][day];
+  const otRate=otPct(otData);
+  const title=`${t('calTitle')} OT · ${fmt(h)}${L().hShort}`;
+  const notes=`${t('overtime')}: ${fmt(h)}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
+  return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId,colorId:'5'})
+    .then(id=>{ if(id){ S.calIds[S.mo][calKey]=id; save(); } });
+}
+async function syncMonthToCalendar() {
+  const e=S.data[S.mo]||{};
+  const otMo=S.ot[S.mo]||{};
+  const days=[...new Set([...Object.keys(e), ...Object.keys(otMo)])];
+  const jobs=days.map(day => {
+      const hours=Number(e[day]||0);
+      const from='09:00';
+      const to=addH(from,hours);
+      const p=[syncToCalendar(Number(day),hours,from,to)];
+      const otData=otMo[Number(day)]||otMo[day];
+      const otH=otHours(otData);
+      if (otH>0) {
+        const otFrom=otData.from||to;
+        const otTo=otEnd(otData)||addH(otFrom,otH);
+        p.push(syncOTToCalendar(Number(day),otH,otFrom,otTo));
+      }
+      return Promise.all(p);
+    });
+  await Promise.all(jobs);
+}
+function clearDay()    {
+  const day=S.modal.day;
+  const calId=S.calIds[S.mo]&&S.calIds[S.mo][day];
+  const otCalId=S.calIds[S.mo]&&S.calIds[S.mo][`${day}_ot`];
+  delEnt(day);
+  if (S.ot[S.mo]) delete S.ot[S.mo][day];
+  if (calId && S.cfg.calSync && window.__fb) window.__fb.deleteCalendarEvent(calId);
+  if (otCalId && S.cfg.calSync && window.__fb) {
+    window.__fb.deleteCalendarEvent(otCalId);
+    if (S.calIds[S.mo]) delete S.calIds[S.mo][`${day}_ot`];
+  }
+  S.modal=null; render();
+}
+async function saveDay() {
+  const m=S.modal;
+  const raw=m.mode==='h'?(parseFloat(m.h)||0):calcRange(m.from,m.to);
+  const h=Math.min(Math.max(raw,0), 24);
+  const from=m.mode==='r'?m.from:'09:00';
+  const to  =m.mode==='r'?m.to  :addH(from,h);
+  setEnt(m.day, Math.round(h*100)/100);
+  // persist overtime
+  if (!S.ot[S.mo]) S.ot[S.mo]={};
+  const otData=S.ot[S.mo][m.day];
+  const otH=otHours(otData);
+  const otRate=otPct(otData);
+  const syncJobs=[];
+  if (otH>0) {
+    let otFrom=(otData&&otData.from)||to;
+    if (timeToMin(otFrom)<timeToMin(to)) otFrom=to; // не может начаться раньше конца работы
+    const otTo=addH(otFrom,otH);
+    S.ot[S.mo][m.day]={h:otH,pct:otRate,from:otFrom,to:otTo};
+    syncJobs.push(syncToCalendar(m.day,h,from,to));
+    syncJobs.push(syncOTToCalendar(m.day,otH,otFrom,otTo));
+  } else {
+    if (S.ot[S.mo][m.day]) delete S.ot[S.mo][m.day];
+    syncJobs.push(syncToCalendar(m.day,h,from,to));
+    syncJobs.push(syncOTToCalendar(m.day,0,'',''));
+  }
+  save();
+  await Promise.all(syncJobs);
+  S.modal=null; render();
+}
+
+// Profile / auth / language
+function openProfile()  { S.profile=true;  render(); }
+function ovProfile(e)   { if(e.target.classList.contains('overlay')){ S.profile=false; render(); } }
+function doSignIn()     { if(window.__fb) window.__fb.signIn(); }
+function doSignOut()    { S.profile=false; if(window.__fb) window.__fb.signOut(); render(); }
+function acceptTerms()  { S.termsAccepted = true; save(); render(); }
+function openLegal(type) {
+  const pages = {
+    terms: './terms.html',
+    privacy: './privacy.html'
+  };
+  const url = pages[type] || pages.terms;
+  window.open(url, '_blank', 'noopener');
+}
+function setLang(l)     {
+  if(!LANGS.includes(l)) return;
+  S.cfg.lang=l;
+  if(S.dcfg) S.dcfg.lang=l;   // keep settings draft in sync
+  save();
+  render();
+}
+async function toggleCalSync(on) {
+  S.calError = null;
+  if (on) {
+    const ok = window.__fb ? await window.__fb.ensureCalendarAccess() : false;
+    if (!ok) on = false; // user closed the consent popup or it failed — stay off
+  }
+  S.cfg.calSync = on;
+  if (S.dcfg) S.dcfg.calSync = on;
+  save();
+  if (on) await syncMonthToCalendar();
+  render();
+}
+
+// Stats actions
+function openStats()       { S.view='stats'; render(); }
+function goYear(d)         { S.yearKey+=d; render(); }
+function barClick(i)       { S.mo=`${S.yearKey}-${p2(i+1)}`; S.view='main'; render(); }
+function jumpToMonth(mk)   { S.mo=mk; S.view='main'; render(); }
+
+// ── Export ─────────────────────────────────────────────────────────────────
+function downloadFile(name, content, mime) {
+  const blob=new Blob([content],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+}
+function exportYearCSV() {
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const yd=getYearData(S.yearKey);
+  const rows=[[t('month'),t('days'),t('hours'),`${t('earnings')} (${sym})`]];
+  yd.forEach(d=>{
+    const mn=new Date(+d.mk.split('-')[0],+d.mk.split('-')[1]-1,1).toLocaleDateString(loc(),{month:'long'});
+    rows.push([mn, d.days, fmt(d.hours), d.earnings.toFixed(2)]);
+  });
+  const totD=yd.reduce((a,d)=>a+d.days,0), totH=yd.reduce((a,d)=>a+d.hours,0), totE=yd.reduce((a,d)=>a+d.earnings,0);
+  rows.push([t('total'), totD, fmt(totH), totE.toFixed(2)]);
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  downloadFile(`shiftly-${S.yearKey}.csv`, '\uFEFF'+csv, 'text/csv;charset=utf-8');
+}
+function exportBackupJSON() {
+  const payload={exportedAt:new Date().toISOString(), cfg:S.cfg, data:S.data, ot:S.ot};
+  downloadFile(`shiftly-backup-${moKey()}.json`, JSON.stringify(payload,null,2), 'application/json');
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+load();
+render();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('./sw.js'); });
+}
+</script>
+</body>
+</html>
