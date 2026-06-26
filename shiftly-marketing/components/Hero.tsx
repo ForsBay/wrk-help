@@ -3,9 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { useLang } from '@/lib/i18n'
-import Dashboard from './Dashboard'
-import ScreenAnalytics from './ScreenAnalytics'
-import DeviceFrame from './DeviceFrame'
+import ScreenGallery from './ScreenGallery'
 
 /* Laptop screen geometry — fractions of the desk-pro.png box (1536×1024). */
 const SCREEN = { left: 30.5, top: 27.5, width: 37.0, height: 39.0 }
@@ -58,10 +56,6 @@ export default function Hero() {
   const overlayRef  = useRef<HTMLDivElement>(null)
   const glowRef     = useRef<HTMLDivElement>(null)
   const showcaseRef = useRef<HTMLDivElement>(null)
-  const screenCalRef = useRef<HTMLDivElement>(null)
-  const screenAnaRef = useRef<HTMLDivElement>(null)
-  const capCalRef    = useRef<HTMLDivElement>(null)
-  const capAnaRef    = useRef<HTMLDivElement>(null)
 
   /* Mouse parallax — single source, many derived layers (GPU transforms only). */
   const mx = useMotionValue(0)
@@ -92,28 +86,20 @@ export default function Hero() {
       ctx = gsap.context(() => {
         const tl = gsap.timeline({
           scrollTrigger: {
-            trigger: sectionRef.current, start: 'top top', end: '+=230%',
+            trigger: sectionRef.current, start: 'top top', end: '+=155%',
             scrub: 1.1, pin: true, pinSpacing: true, pinType: 'transform',
             anticipatePin: 1, invalidateOnRefresh: true,
           },
         })
-        // ── Act 1 — fly into the laptop ──
-        tl.to(textRef.current, { opacity: 0, y: -70, ease: 'power2.in', duration: 0.3 }, 0)
-        tl.to(glowRef.current, { opacity: 1, ease: 'power1.in', duration: 0.55 }, 0)
-        tl.to(sceneRef.current, { scale: 2.35, ease: 'power2.inOut', duration: 1 }, 0)
-        tl.to(overlayRef.current, { opacity: 1, ease: 'power1.in', duration: 0.22 }, 0.58)
-        // ── Act 2 — land on the device showcase ──
+        // ── Act 1 — fly into the laptop (tightened ~25% so the page feels alive sooner) ──
+        tl.to(textRef.current, { opacity: 0, y: -70, ease: 'power2.in', duration: 0.2 }, 0)
+        tl.to(glowRef.current, { opacity: 1, ease: 'power1.in', duration: 0.38 }, 0)
+        tl.to(sceneRef.current, { scale: 2.35, ease: 'power2.inOut', duration: 0.55 }, 0)
+        tl.to(overlayRef.current, { opacity: 1, ease: 'power1.in', duration: 0.16 }, 0.5)
+        // ── Act 2 — land straight on the real app; the gallery handles screen switching ──
         tl.fromTo(showcaseRef.current,
-          { opacity: 0, scale: 1.08, y: 30 },
-          { opacity: 1, scale: 1, y: 0, ease: 'power2.out', duration: 0.34 }, 0.64)
-        tl.fromTo('.hero-callout',
-          { opacity: 0, scale: 0.9, y: 12 },
-          { opacity: 1, scale: 1, y: 0, ease: 'power2.out', duration: 0.4, stagger: 0.08 }, 0.9)
-        // ── Act 3 — story beat: calendar → analytics ──
-        tl.to(capCalRef.current, { opacity: 0, y: -22, ease: 'power2.in', duration: 0.25 }, 1.5)
-        tl.to(screenCalRef.current, { opacity: 0, ease: 'power1.inOut', duration: 0.3 }, 1.52)
-        tl.fromTo(screenAnaRef.current, { opacity: 0 }, { opacity: 1, ease: 'power1.inOut', duration: 0.3 }, 1.54)
-        tl.fromTo(capAnaRef.current, { opacity: 0, y: 22 }, { opacity: 1, y: 0, ease: 'power2.out', duration: 0.3 }, 1.62)
+          { autoAlpha: 0, scale: 1.08, y: 30 },
+          { autoAlpha: 1, scale: 1, y: 0, ease: 'power2.out', duration: 0.32 }, 0.56)
       }, sectionRef)
 
       requestAnimationFrame(() => ScrollTrigger.refresh())
@@ -276,45 +262,14 @@ export default function Hero() {
       {/* ── Solid backdrop hides the pixelated zoom frame ── */}
       <div ref={overlayRef} style={{ position: 'absolute', inset: 0, background: '#0b0b0d', opacity: 0, pointerEvents: 'none', zIndex: 8 }} />
 
-      {/* ── Device showcase we land on (scroll storytelling) ── */}
+      {/* ── Device showcase we land on — interactive gallery (no scroll-locked states) ── */}
       <div ref={showcaseRef} style={{
-        position: 'absolute', inset: 0, zIndex: 9, opacity: 0,
+        position: 'absolute', inset: 0, zIndex: 9, opacity: 0, visibility: 'hidden',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        padding: 'clamp(16px, 3vh, 44px) 24px', pointerEvents: 'none',
+        padding: 'clamp(16px, 3vh, 44px) 24px', pointerEvents: 'auto',
         background: 'radial-gradient(125% 80% at 50% 8%, #14171a 0%, #0a0a0c 58%)',
       }}>
-        {/* Captions (cross-faded, stacked so they never reflow) */}
-        <div style={{ position: 'relative', height: 'clamp(60px, 9vh, 96px)', width: '100%', maxWidth: '760px', textAlign: 'center', marginBottom: 'clamp(8px, 1.6vh, 22px)' }}>
-          <div ref={capCalRef} style={{ position: 'absolute', inset: 0 }}>
-            <p style={{ color: '#34c98a', fontSize: '12px', letterSpacing: '.18em', textTransform: 'uppercase', fontWeight: 600, margin: '0 0 10px' }}>{t.hero.app.thisMonth}</p>
-            <h2 style={{ fontFamily: 'var(--font-manrope)', fontWeight: 400, fontSize: 'clamp(22px, 3vw, 40px)', letterSpacing: '-.02em', color: '#fafafa', margin: 0, lineHeight: 1.1 }}>{t.hero.showcaseTitle}</h2>
-          </div>
-          <div ref={capAnaRef} style={{ position: 'absolute', inset: 0, opacity: 0 }}>
-            <p style={{ color: '#34c98a', fontSize: '12px', letterSpacing: '.18em', textTransform: 'uppercase', fontWeight: 600, margin: '0 0 10px' }}>{t.hero.app.earned}</p>
-            <h2 style={{ fontFamily: 'var(--font-manrope)', fontWeight: 400, fontSize: 'clamp(22px, 3vw, 40px)', letterSpacing: '-.02em', color: '#fafafa', margin: 0, lineHeight: 1.1 }}>{t.hero.showcaseTitle2}</h2>
-          </div>
-        </div>
-
-        {/* Device + floating glass callouts */}
-        <div style={{ position: 'relative', width: 'min(1080px, 92vw)' }}>
-          <DeviceFrame style={{ width: '100%', height: 'min(660px, 66vh)' }}>
-            <div ref={screenCalRef} style={{ position: 'absolute', inset: 0 }}><Dashboard /></div>
-            <div ref={screenAnaRef} style={{ position: 'absolute', inset: 0, opacity: 0 }}><ScreenAnalytics /></div>
-          </DeviceFrame>
-
-          <div className="hero-callout glass-chip" style={{ position: 'absolute', top: '-4%', right: '-2%' }}>
-            <span style={{ fontSize: '20px', fontWeight: 700, fontFamily: "ui-monospace, monospace", color: '#fff' }}>€2,840</span>
-            <span style={{ fontSize: '11px', color: '#a1a1aa', letterSpacing: '.08em', textTransform: 'uppercase' }}>{t.hero.app.earned}</span>
-          </div>
-          <div className="hero-callout glass-chip" style={{ position: 'absolute', left: '-3%', top: '40%' }}>
-            <span style={{ fontSize: '20px', fontWeight: 700, color: '#34c98a' }}>1.5×</span>
-            <span style={{ fontSize: '11px', color: '#a1a1aa', letterSpacing: '.08em', textTransform: 'uppercase' }}>{t.hero.app.overtime}</span>
-          </div>
-          <div className="hero-callout glass-chip" style={{ position: 'absolute', bottom: '4%', right: '3%', flexDirection: 'row', gap: '8px', alignItems: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#34c98a" strokeWidth="1.4" /><path d="M5 8l2 2 4-4.5" stroke="#34c98a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            <span style={{ fontSize: '13px', color: '#e4e4e7', fontWeight: 500 }}>Google Calendar</span>
-          </div>
-        </div>
+        <ScreenGallery />
       </div>
     </div>
   )

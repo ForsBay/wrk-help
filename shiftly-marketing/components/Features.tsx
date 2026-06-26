@@ -32,33 +32,29 @@ const ICONS = [
   </svg>),
 ]
 
-function Row({ i, label, headline, body, icon }: { i: number; label: string; headline: string; body: string; icon: React.ReactNode }) {
+function Cell({ i, label, headline, body, icon }: { i: number; label: string; headline: string; body: string; icon: React.ReactNode }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 22 }}
+      initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.7, delay: (i % 3) * 0.1, ease: [.16,1,.3,1] }}
-      className="feature-row"
+      viewport={{ once: true, margin: '-60px' }}
+      transition={{ duration: 0.6, delay: (i % 2) * 0.08, ease: [.16,1,.3,1] }}
+      className="feature-cell"
     >
-      {/* index */}
-      <div style={{ fontFamily: 'var(--font-manrope)', fontWeight: 300, fontSize: '15px', color: '#34c98a', letterSpacing: '.04em', paddingTop: '4px' }}>
-        {String(i + 1).padStart(2, '0')}
+      {/* meta row: index · icon · label */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <span style={{ fontFamily: 'var(--font-manrope)', fontWeight: 300, fontSize: '13px', color: '#34c98a', letterSpacing: '.04em' }}>
+          {String(i + 1).padStart(2, '0')}
+        </span>
+        <span style={{ opacity: .9, display: 'inline-flex' }}>{icon}</span>
+        <span style={{ color: '#71717a', fontSize: '11px', fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' }}>{label}</span>
       </div>
 
-      {/* title block */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ opacity: .9 }}>{icon}</span>
-          <span style={{ color: '#71717a', fontSize: '11px', fontWeight: 600, letterSpacing: '.12em', textTransform: 'uppercase' }}>{label}</span>
-        </div>
-        <h3 style={{ fontFamily: 'var(--font-manrope)', fontWeight: 500, fontSize: 'clamp(20px, 2vw, 26px)', color: '#fafafa', margin: 0, lineHeight: 1.2, letterSpacing: '-.01em' }}>
-          {headline}
-        </h3>
-      </div>
+      <h3 style={{ fontFamily: 'var(--font-manrope)', fontWeight: 500, fontSize: 'clamp(19px, 1.7vw, 23px)', color: '#fafafa', margin: 0, lineHeight: 1.2, letterSpacing: '-.01em' }}>
+        {headline}
+      </h3>
 
-      {/* body */}
-      <p style={{ color: '#a1a1aa', fontSize: '15px', lineHeight: 1.7, fontWeight: 300, margin: 0, maxWidth: '46ch' }}>
+      <p style={{ color: '#a1a1aa', fontSize: '14.5px', lineHeight: 1.6, fontWeight: 300, margin: 0 }}>
         {body}
       </p>
     </motion.div>
@@ -84,27 +80,36 @@ export default function Features() {
           </h2>
         </div>
 
-        {/* De-boxed editorial list — rows separated by 1px borders */}
-        <div>
+        {/* Dense 2-column grid — hairline dividers (same language as Stats) */}
+        <div className="feature-grid">
           {items.map((f, i) => (
-            <Row key={f.label} i={i} label={f.label} headline={f.headline} body={f.body} icon={f.icon} />
+            <Cell key={f.label} i={i} label={f.label} headline={f.headline} body={f.body} icon={f.icon} />
           ))}
         </div>
       </div>
 
       <style>{`
-        .feature-row {
+        .feature-grid {
           display: grid;
-          grid-template-columns: 48px 1.1fr 1.3fr;
-          gap: 40px;
-          align-items: start;
-          padding: 36px 0;
-          border-top: 1px solid var(--border);
+          grid-template-columns: repeat(2, 1fr);
+          gap: 1px;
+          background: var(--border);
+          border: 1px solid var(--border);
+          border-radius: 14px;
+          overflow: hidden;
+        }
+        .feature-cell {
+          background: #121214;
+          padding: 28px 32px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
           transition: background .25s;
         }
-        .feature-row:hover { background: linear-gradient(90deg, rgba(52,201,138,.04), transparent 60%); }
+        .feature-cell:hover { background: linear-gradient(120deg, rgba(52,201,138,.05), #121214 60%); }
         @media (max-width: 760px) {
-          .feature-row { grid-template-columns: 1fr; gap: 16px; padding: 28px 0; }
+          .feature-grid { grid-template-columns: 1fr; }
+          .feature-cell { padding: 24px 22px; }
         }
       `}</style>
     </section>
