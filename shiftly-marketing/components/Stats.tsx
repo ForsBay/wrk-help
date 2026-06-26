@@ -6,10 +6,10 @@ import { useLang } from '@/lib/i18n'
 import SpotlightCard from '@/components/SpotlightCard'
 
 const STAT_NUMS = [
-  { value: 9420,  suffix: '',   prefix: '' },
-  { value: 4.8,   suffix: '',   prefix: '', decimal: true },
-  { value: 1.7,   suffix: 'M',  prefix: '€', decimal: true },
-  { value: 6,     suffix: '',   prefix: '' },
+  { value: 6,   suffix: '',   prefix: '' },
+  { value: 3,   suffix: '×',  prefix: '' },
+  { value: 0,   suffix: '',   prefix: '€' },
+  { value: 30,  suffix: 's',  prefix: '' },
 ]
 
 function CountUp({ to, decimal, prefix = '', suffix = '' }: { to: number; decimal?: boolean; prefix?: string; suffix?: string }) {
@@ -67,7 +67,7 @@ export default function Stats() {
               <div style={{ position: 'absolute', top: 0, left: '36px', right: '36px', height: '2px', background: 'rgba(52,201,138,.35)', borderRadius: '0 0 2px 2px' }} />
 
               <div style={{ fontFamily: 'var(--font-manrope)', fontWeight: 300, fontSize: 'clamp(44px, 5vw, 64px)', color: '#fafafa', lineHeight: 1, letterSpacing: '-.01em', marginBottom: '10px' }}>
-                <CountUp to={s.value} decimal={s.decimal} prefix={s.prefix} suffix={s.suffix} />
+                <CountUp to={s.value} prefix={s.prefix} suffix={s.suffix} />
               </div>
               <div style={{ color: '#fafafa', fontWeight: 500, fontSize: '15px', marginBottom: '6px' }}>{s.label}</div>
               <div style={{ color: '#a1a1aa', fontWeight: 300, fontSize: '13px', lineHeight: 1.5 }}>{s.description}</div>

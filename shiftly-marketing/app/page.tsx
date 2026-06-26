@@ -6,6 +6,7 @@ import Hero        from '@/components/Hero'
 import Features    from '@/components/Features'
 import Stats       from '@/components/Stats'
 import Comparison  from '@/components/Comparison'
+import Testimonials from '@/components/Testimonials'
 import CTA         from '@/components/CTA'
 import Footer      from '@/components/Footer'
 import FlipSection from '@/components/FlipSection'
@@ -20,6 +21,7 @@ export default function Home() {
       <Hero />
       <CalendarSheet tab={t.nav.features}><Features /></CalendarSheet>
       <FlipSection><Stats /></FlipSection>
+      <Testimonials />
       <CalendarSheet tab={t.nav.compare}><Comparison /></CalendarSheet>
       <CalendarSheet tab={t.nav.download}><CTA /></CalendarSheet>
       <Footer />

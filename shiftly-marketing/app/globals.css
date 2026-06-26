@@ -163,6 +163,20 @@ input  { font-family: var(--font-manrope); }
 .dl-btn:hover svg { transform: translateY(2px); }
 .dl-btn:active { transform: translateY(1px) scale(.99); }
 
+/* Coming-soon variant — muted, never pretends to be a live download. */
+.dl-btn--soon {
+  background: rgba(255,255,255,.03);
+  border-color: rgba(255,255,255,.08);
+  color: var(--text-2);
+}
+.dl-btn--soon:hover {
+  background: rgba(255,255,255,.06);
+  border-color: rgba(255,255,255,.14);
+  color: var(--text);
+  box-shadow: none;
+}
+.dl-btn--soon:hover svg { transform: none; }
+
 /* ── Floating glass callout chip (liquid-glass: blur + inner edge) ─ */
 .glass-chip {
   display: inline-flex; flex-direction: column; gap: 2px;

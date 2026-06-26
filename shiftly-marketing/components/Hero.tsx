@@ -23,7 +23,7 @@ const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
 }))
 
 /* Magnetic, performant button (motion values — no re-renders). */
-function MagneticButton({ children, className, style }: { children: React.ReactNode; className: string; style?: React.CSSProperties }) {
+function MagneticButton({ children, className, style, onClick }: { children: React.ReactNode; className: string; style?: React.CSSProperties; onClick?: () => void }) {
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const sx = useSpring(x, { stiffness: 220, damping: 16 })
@@ -33,6 +33,7 @@ function MagneticButton({ children, className, style }: { children: React.ReactN
     <motion.button
       ref={ref}
       className={className}
+      onClick={onClick}
       style={{ x: sx, y: sy, ...style }}
       whileHover={{ scale: 1.035 }}
       whileTap={{ scale: 0.97 }}
@@ -126,6 +127,12 @@ export default function Hero() {
     my.set(e.clientY / window.innerHeight - 0.5)
   }
   const onLeave = () => { mx.set(0); my.set(0) }
+
+  /* Smooth-scroll to a section (Install → Download, How it works → Features). */
+  const go = (href: string) => {
+    const el = document.querySelector(href)
+    if (el) el.scrollIntoView({ behavior: 'smooth' })
+  }
 
   return (
     <div
@@ -256,10 +263,10 @@ export default function Hero() {
             {t.hero.sub}
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <MagneticButton className="cta-primary" style={{ padding: '16px 34px', fontSize: '16px' }}>
+            <MagneticButton className="cta-primary" style={{ padding: '16px 34px', fontSize: '16px' }} onClick={() => go('#cta')}>
               {t.hero.cta}
             </MagneticButton>
-            <MagneticButton className="cta-ghost" style={{ padding: '15px 28px', fontSize: '15px' }}>
+            <MagneticButton className="cta-ghost" style={{ padding: '15px 28px', fontSize: '15px' }} onClick={() => go('#features')}>
               {t.hero.secondary} ↓
             </MagneticButton>
           </div>

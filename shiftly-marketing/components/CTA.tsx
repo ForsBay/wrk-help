@@ -4,6 +4,18 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useLang } from '@/lib/i18n'
 import SpotlightCard from '@/components/SpotlightCard'
+import ComingSoonModal from '@/components/ComingSoonModal'
+
+/* ── Real download links ──────────────────────────────────────────────
+   Fill these in when an installer/store listing exists. A platform with a
+   non-empty URL becomes downloadable; everything else shows the
+   "Coming soon" modal instead of pretending to download. */
+const DOWNLOAD_URLS: Record<string, string> = {
+  Windows: '', // ← TODO: set the real Windows installer URL
+  Android: '',
+  iPhone: '',
+  Web: '',
+}
 
 /* ── Platform glyphs ─────────────────────────────────────────────── */
 const WindowsIcon = () => (
@@ -35,14 +47,28 @@ export default function CTA() {
   const c = t.cta
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
+  const [modalPlatform, setModalPlatform] = useState<string | null>(null)
   const submit = (e: React.FormEvent) => { e.preventDefault(); if (email) setSent(true) }
 
+  /* Truthful platform matrix (Task 2/3). Only Windows is "Available"; the
+     rest are honest about being unreleased. */
   const PLATFORMS = [
-    { name: 'Windows', meta: 'Windows 10 / 11 · 24 MB',  icon: <WindowsIcon />, status: c.available, dot: '#34c98a', cta: c.get,     primary: true },
-    { name: 'Android', meta: 'Google Play · 5.0+',        icon: <AndroidIcon />, status: c.beta,      dot: '#f5b94a', cta: c.get,     primary: true },
-    { name: 'iPhone',  meta: 'App Store · iOS 16+',        icon: <AppleIcon />,   status: c.available, dot: '#34c98a', cta: c.get,     primary: true },
-    { name: 'Web',     meta: 'PWA · any browser',          icon: <WebIcon />,     status: c.instant,   dot: '#34c98a', cta: c.openApp, primary: false },
+    { name: 'Windows', meta: 'Windows 10 / 11',  icon: <WindowsIcon />, status: c.available,  dot: '#34c98a', available: true,  cta: c.get },
+    { name: 'Android', meta: 'Google Play',       icon: <AndroidIcon />, status: c.comingSoon, dot: '#f5b94a', available: false, cta: c.comingSoonBtn },
+    { name: 'iPhone',  meta: 'App Store · iOS',   icon: <AppleIcon />,   status: c.comingSoon, dot: '#f5b94a', available: false, cta: c.comingSoonBtn },
+    { name: 'Web',     meta: 'PWA · any browser', icon: <WebIcon />,     status: c.inDev,      dot: '#f5b94a', available: false, cta: c.comingSoonBtn },
   ]
+
+  const handleDownload = (p: typeof PLATFORMS[number]) => {
+    const url = DOWNLOAD_URLS[p.name]
+    if (p.available && url) {
+      // Real download/open — let the browser handle the installer or store page.
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } else {
+      // Nothing to download yet → be honest instead of doing nothing.
+      setModalPlatform(p.name)
+    }
+  }
 
   return (
     <section id="cta" style={{ background: 'transparent', position: 'relative', padding: '72px 40px', overflow: 'hidden' }}>
@@ -88,13 +114,17 @@ export default function CTA() {
                 <div style={{ color: '#71717a', fontSize: '13px', marginTop: '5px', fontWeight: 400 }}>{p.meta}</div>
               </div>
 
-              {/* download button */}
-              <button className="dl-btn">
+              {/* download button — downloads if available, else opens the modal */}
+              <button
+                className={p.available ? 'dl-btn' : 'dl-btn dl-btn--soon'}
+                onClick={() => handleDownload(p)}
+                aria-label={`${p.cta} — ${p.name}`}
+              >
                 {p.cta}
-                {p.primary ? (
+                {p.available ? (
                   <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2.5v8m0 0 3-3m-3 3-3-3M3 13h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 ) : (
-                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4 8h8m0 0-3-3m3 3-3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1.5a4 4 0 0 0-4 4V7a1.5 1.5 0 0 0-1.5 1.5v4A1.5 1.5 0 0 0 4 14h8a1.5 1.5 0 0 0 1.5-1.5v-4A1.5 1.5 0 0 0 12 7V5.5a4 4 0 0 0-4-4Zm2.5 5.5h-5V5.5a2.5 2.5 0 0 1 5 0V7Z" fill="currentColor" /></svg>
                 )}
               </button>
             </SpotlightCard>
@@ -121,6 +151,12 @@ export default function CTA() {
           )}
         </div>
       </div>
+
+      <ComingSoonModal
+        open={modalPlatform !== null}
+        platform={modalPlatform}
+        onClose={() => setModalPlatform(null)}
+      />
     </section>
   )
 }
