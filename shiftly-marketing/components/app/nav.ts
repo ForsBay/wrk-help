@@ -8,7 +8,8 @@
 
 import type { IconName } from './ui/Icon'
 
-export type ViewId = 'calendar' | 'stats' | 'integrations' | 'settings'
+export type ViewId =
+  | 'dashboard' | 'calendar' | 'stats' | 'integrations' | 'export' | 'settings' | 'profile'
 
 export interface NavItem {
   id: ViewId
@@ -18,9 +19,21 @@ export interface NavItem {
   hotkey?: string
 }
 
+// MOBILE bottom nav — the 4 core destinations only (unchanged).
 export const NAV_ITEMS: NavItem[] = [
   { id: 'calendar',     label: 'Shifts',       icon: 'calendar', hotkey: '1' },
   { id: 'stats',        label: 'Statistics',   icon: 'chart',    hotkey: '2' },
   { id: 'integrations', label: 'Integrations', icon: 'plug',     hotkey: '3' },
   { id: 'settings',     label: 'Settings',     icon: 'gear',     hotkey: '4' },
 ]
+
+// DESKTOP rail — the full set; Profile is pinned to the bottom by the Rail.
+export const RAIL_ITEMS: NavItem[] = [
+  { id: 'dashboard',    label: 'Dashboard',    icon: 'grid',     hotkey: '1' },
+  { id: 'calendar',     label: 'Calendar',     icon: 'calendar', hotkey: '2' },
+  { id: 'stats',        label: 'Statistics',   icon: 'chart',    hotkey: '3' },
+  { id: 'integrations', label: 'Integrations', icon: 'plug',     hotkey: '4' },
+  { id: 'export',       label: 'Export',       icon: 'download', hotkey: '5' },
+  { id: 'settings',     label: 'Settings',     icon: 'gear',     hotkey: '6' },
+]
+export const RAIL_PROFILE: NavItem = { id: 'profile', label: 'Profile', icon: 'user' }

@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react'
 
 export type IconName =
   | 'calendar' | 'chart' | 'plug' | 'gear' | 'plus' | 'clock' | 'coin' | 'chevron'
+  | 'grid' | 'download' | 'user'
 
 const PATHS: Record<IconName, string> = {
   calendar: 'M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z',
@@ -13,6 +14,9 @@ const PATHS: Record<IconName, string> = {
   clock:    'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
   coin:     'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM9.5 14.5h4M9.5 9.5h4M12 7v10',
   chevron:  'M9 6l6 6-6 6',
+  grid:     'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  download: 'M12 3v11m0 0 4-4m-4 4-4-4M5 20h14',
+  user:     'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM5 20a7 7 0 0 1 14 0',
 }
 
 export function Icon({ name, size = 20, style, className }: {
