@@ -241,6 +241,15 @@ input  { font-family: var(--font-manrope); }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
+   APP SHELL — desktop-only hover affordances (no hover on touch).
+   ═══════════════════════════════════════════════════════════════════ */
+@media (hover: hover) and (pointer: fine) {
+  .shift-row:hover { background: var(--surface-2, #1a1a1e) !important; }
+  .side-item:hover { background: rgba(255,255,255,.05); }
+  .ctx-item:hover  { background: rgba(255,255,255,.06); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    PERFORMANCE TIERS — gate class-based / global effects.
    Component-level effects (Hero glows, Lenis, 3D sheets) are gated in JS
    via usePerf(). These rules cover the CSS-only decorations.
@@ -291,6 +300,7 @@ html, body { max-width: 100%; overflow-x: hidden; }
 /* Touch devices: every interactive control gets a comfortable thumb target. */
 @media (hover: none) and (pointer: coarse) {
   nav a, nav button { min-height: 44px; display: inline-flex; align-items: center; }
+  footer a { min-height: 40px; display: inline-flex; align-items: center; } /* footer links */
   .dl-btn { min-height: 48px; }                 /* download buttons */
   .cta-primary, .cta-ghost, .btn-primary, .btn-ghost { min-height: 46px; }
   input, .tmin, .hin, .rin { min-height: 44px; } /* form fields */
@@ -306,9 +316,58 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .cv-section { contain-intrinsic-size: 0 560px; } /* shorter sections on mobile */
   /* marquee cards shouldn't exceed the viewport width */
   .scroll-track > * { max-width: 86vw; }
+
+  /* Sections with inline side padding (shorthand overrides the rule above) — pull
+     them back to thumb-safe gutters and trim the tall desktop vertical rhythm. */
+  .cmp-section, #cta {
+    padding-left: max(16px, env(safe-area-inset-left)) !important;
+    padding-right: max(16px, env(safe-area-inset-right)) !important;
+  }
+  .cmp-section { padding-top: 56px !important; padding-bottom: 56px !important; }
+
+  /* Comparison: 3 cramped columns → a clean stacked card per feature. The
+     ✓ / ✗ icons already convey "Shiftly vs spreadsheet", so column headers go. */
+  .cmp-head { display: none !important; }
+  .cmp-row { grid-template-columns: 1fr !important; padding: 4px 0; }
+  .cmp-row > * { border-left: none !important; padding: 8px 16px !important; }
+  .cmp-label { font-weight: 600 !important; font-size: 15px !important; padding-top: 14px !important; padding-bottom: 2px !important; }
+
+  /* Footer: stack brand over link columns instead of squeezing two columns. */
+  .footer-top { grid-template-columns: 1fr !important; gap: 36px !important; }
 }
 
 /* Tablets (portrait): use the extra width without jumping to the desktop grid. */
 @media (min-width: 641px) and (max-width: 1024px) {
   section { padding-left: 28px; padding-right: 28px; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE EFFECT KILL-SWITCH — every touch device, regardless of perf tier.
+   A flagship phone still gets the native, effect-free experience. data-mobile
+   is set before paint by PERF_INLINE_SCRIPT. !important overrides inline styles
+   (which are not !important), so this reliably neutralizes component effects too.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* backdrop-filter and mix-blend are the most expensive mobile-GPU operations. */
+html[data-mobile] * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  mix-blend-mode: normal !important;
+}
+/* keep glass elements legible once their blur is gone — solid tint instead */
+html[data-mobile] .glass-chip,
+html[data-mobile] .cta-ghost { background: rgba(20, 20, 24, 0.92) !important; }
+
+/* drop pure decoration that costs paint/compositing on phones */
+html[data-mobile] .hero-particle,
+html[data-mobile] .hero-glow-layer,
+html[data-mobile] .hero-sweep-layer,
+html[data-mobile] .noise::after { display: none !important; }
+
+/* tame the remaining ambient blurs (orbs, device bloom) — smaller radius is far
+   cheaper to rasterize and looks the same at phone scale; never animate them */
+html[data-mobile] .orb        { animation: none !important; filter: blur(30px) !important; opacity: .5 !important; }
+html[data-mobile] .df-bloom   { filter: blur(34px) !important; }
+html[data-mobile] .scroll-track { animation-duration: 80s !important; }
+/* no shine sweep on the primary CTA */
+html[data-mobile] .cta-primary::after { display: none !important; }

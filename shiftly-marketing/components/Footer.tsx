@@ -36,7 +36,7 @@ export default function Footer() {
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* Top row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '48px', marginBottom: '56px', alignItems: 'start', flexWrap: 'wrap' }}>
+        <div className="footer-top" style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '48px', marginBottom: '56px', alignItems: 'start' }}>
 
           {/* Brand */}
           <div style={{ maxWidth: '320px' }}>

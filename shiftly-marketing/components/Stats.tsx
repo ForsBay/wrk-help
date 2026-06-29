@@ -43,7 +43,7 @@ export default function Stats() {
   const { t } = useLang()
   const stats = STAT_NUMS.map((n, i) => ({ ...n, ...t.stats.items[i] }))
   return (
-    <section style={{ background: 'radial-gradient(120% 90% at 50% 0%, #20203012 0%, transparent 55%), #1a1a1e', position: 'relative', padding: '112px 24px' }}>
+    <section style={{ background: 'radial-gradient(120% 90% at 50% 0%, #20203012 0%, transparent 55%), #1a1a1e', position: 'relative', padding: '112px 24px', overflow: 'hidden' }}>
       {/* Orbs */}
       <div className="orb" style={{ left: '-10%', top: '10%', width: '40vw', height: '40vw', background: 'radial-gradient(ellipse, rgba(52,201,138,.10) 0%, transparent 65%)' }} />
       <div className="orb" style={{ right: '-8%', bottom: '-5%', width: '34vw', height: '34vw', background: 'radial-gradient(ellipse, rgba(52,201,138,.07) 0%, transparent 65%)' }} />

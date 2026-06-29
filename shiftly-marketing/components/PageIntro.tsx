@@ -8,7 +8,10 @@ import { useEffect, useState } from 'react'
 export default function PageIntro() {
   const [done, setDone] = useState(false)
   useEffect(() => {
-    const t = setTimeout(() => setDone(true), 850)
+    // On touch devices the splash only needs to cover the one-frame Hero→HeroMobile
+    // swap, so keep it short — a long splash directly delays LCP on mobile.
+    const isMobile = window.matchMedia?.('(hover: none) and (pointer: coarse)').matches
+    const t = setTimeout(() => setDone(true), isMobile ? 380 : 850)
     return () => clearTimeout(t)
   }, [])
 

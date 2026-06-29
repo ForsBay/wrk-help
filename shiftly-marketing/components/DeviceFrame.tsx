@@ -9,7 +9,7 @@ export default function DeviceFrame({ children, style }: { children: ReactNode; 
   return (
     <div style={{ position: 'relative', ...style }}>
       {/* Ambient bloom behind the device */}
-      <div style={{
+      <div className="df-bloom" style={{
         position: 'absolute', inset: '-10% -8% -18% -8%',
         background: 'radial-gradient(58% 56% at 50% 42%, rgba(52,201,138,.16), transparent 72%)',
         filter: 'blur(70px)', pointerEvents: 'none',

@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Manrope } from 'next/font/google'
 import './globals.css'
 import SmoothScroll from '@/components/SmoothScroll'
@@ -7,6 +7,7 @@ import PageIntro from '@/components/PageIntro'
 import { LangProvider } from '@/lib/i18n'
 import { PerfProvider } from '@/lib/perf-context'
 import { PERF_INLINE_SCRIPT } from '@/lib/performance'
+import { PLATFORM_INLINE_SCRIPT } from '@/lib/platform'
 
 const manrope = Manrope({
   subsets: ['latin', 'cyrillic'],
@@ -16,6 +17,19 @@ const manrope = Manrope({
 })
 
 const BASE_URL = 'https://shiftlytime.com'
+
+// viewport-fit=cover lets the page extend under the notch / Dynamic Island /
+// Android cutouts; components then use env(safe-area-inset-*) to stay clear of
+// them. maximumScale stays high enough to allow pinch-zoom (accessibility).
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0b' },
+    { media: '(prefers-color-scheme: light)', color: '#0a0a0b' },
+  ],
+}
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -100,8 +114,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} ${manrope.className}`}>
-        {/* Sets <html data-perf> before first paint so heavy effects are gated
-            without a flash. Runs synchronously, ahead of the React tree. */}
+        {/* Platform + perf classification, set on <html data-*> before first
+            paint so layout/CSS never flash the wrong device. Both run once,
+            synchronously, ahead of the React tree — zero re-renders. */}
+        <script dangerouslySetInnerHTML={{ __html: PLATFORM_INLINE_SCRIPT }} />
         <script dangerouslySetInnerHTML={{ __html: PERF_INLINE_SCRIPT }} />
         <PerfProvider>
           <LangProvider>

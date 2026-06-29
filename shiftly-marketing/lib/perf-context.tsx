@@ -12,21 +12,22 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { MotionConfig } from 'framer-motion'
 import {
-  PerfTier, PerfState, scoreDevice, measureFps, applyTier, downgrade,
+  PerfTier, PerfState, scoreDevice, measureFps, applyTier, downgrade, detectMobile,
 } from './performance'
 
-const PerfCtx = createContext<PerfState>({ tier: 'full', reducedMotion: false })
+const PerfCtx = createContext<PerfState>({ tier: 'full', reducedMotion: false, mobile: false })
 
 function readInitialTier(): PerfState {
   if (typeof document !== 'undefined') {
-    const attr = document.documentElement.dataset.perf as PerfTier | undefined
+    const ds = document.documentElement.dataset
+    const attr = ds.perf as PerfTier | undefined
     if (attr === 'full' || attr === 'mid' || attr === 'lite') {
-      return { tier: attr, reducedMotion: document.documentElement.dataset.reducedMotion === 'true' }
+      return { tier: attr, reducedMotion: ds.reducedMotion === 'true', mobile: ds.mobile === 'true' }
     }
   }
   // Fallback if the inline script didn't run (e.g. SSR string render).
   const s = scoreDevice()
-  return { tier: s.tier, reducedMotion: s.reducedMotion }
+  return { tier: s.tier, reducedMotion: s.reducedMotion, mobile: s.mobile }
 }
 
 export function PerfProvider({ children }: { children: ReactNode }) {
@@ -72,10 +73,11 @@ export function PerfProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // On `lite`, tell Framer Motion to drop transform/layout animations app-wide
-  // (it keeps opacity), turning every reveal/parallax into a cheap fade. On other
-  // tiers, still honor the user's OS reduced-motion setting.
-  const reducedMotionMode = state.tier === 'lite' || state.reducedMotion ? 'always' : 'user'
+  // On `lite` AND on every mobile/touch device, tell Framer Motion to drop
+  // transform/layout animations app-wide (it keeps opacity) → every reveal /
+  // parallax becomes a cheap fade. On desktop non-lite, honor the OS setting.
+  const reducedMotionMode =
+    state.tier === 'lite' || state.mobile || state.reducedMotion ? 'always' : 'user'
 
   return (
     <PerfCtx.Provider value={state}>
@@ -88,12 +90,16 @@ export const usePerf = () => useContext(PerfCtx)
 
 /** Convenience flags for components. */
 export function usePerfFlags() {
-  const { tier, reducedMotion } = usePerf()
+  const { tier, reducedMotion, mobile } = usePerf()
+  // Mobile/touch is always treated as "lite" for heavy-effect gating, and never
+  // as "full" — even a powerful phone gets the native, effect-free experience.
+  const isLite = tier === 'lite' || reducedMotion || mobile
   return {
     tier,
     reducedMotion,
-    isLite: tier === 'lite' || reducedMotion,
-    isMidOrBelow: tier !== 'full' || reducedMotion,
-    isFull: tier === 'full' && !reducedMotion,
+    isMobile: mobile,
+    isLite,
+    isMidOrBelow: tier !== 'full' || reducedMotion || mobile,
+    isFull: tier === 'full' && !reducedMotion && !mobile,
   }
 }

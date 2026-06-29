@@ -43,10 +43,13 @@ export default function SpotlightCard({
       transition={{ duration: 0.7, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
       onMouseMove={onMove}
       onMouseLeave={onLeave}
-      style={{ position: 'relative', rotateX: srx, rotateY: sry, transformStyle: 'preserve-3d', willChange: 'transform', ...style }}
+      // overflow:hidden clips the spotlight glow to the card's rounded corners so
+      // the emerald gradient never bleeds past the border (fixes the edge artifact
+      // visible on e.g. the "Web" card). The card's own box-shadow is unaffected.
+      style={{ position: 'relative', overflow: 'hidden', rotateX: srx, rotateY: sry, transformStyle: 'preserve-3d', willChange: 'transform', ...style }}
     >
       {children}
-      <motion.div style={{ position: 'absolute', inset: 0, background: glow, opacity: sop, pointerEvents: 'none' }} />
+      <motion.div style={{ position: 'absolute', inset: 0, borderRadius: 'inherit', background: glow, opacity: sop, pointerEvents: 'none' }} />
     </motion.div>
   )
 }

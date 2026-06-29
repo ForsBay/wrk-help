@@ -21,7 +21,7 @@ export default function Comparison() {
   const { t } = useLang()
   const ROWS = t.comparison.rows
   return (
-    <section id="comparison" style={{ background: 'transparent', position: 'relative', padding: '60px 40px' }}>
+    <section id="comparison" className="cmp-section" style={{ background: 'transparent', position: 'relative', padding: '60px 40px' }}>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
 
@@ -37,7 +37,7 @@ export default function Comparison() {
         {/* Table */}
         <div className="section-reveal" style={{ overflow: 'hidden', border: '1px solid rgba(63,63,70,.2)' }}>
           {/* Column headers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 3fr', background: '#0d0d0f', borderBottom: '1px solid rgba(63,63,70,.2)' }}>
+          <div className="cmp-head" style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 3fr', background: '#0d0d0f', borderBottom: '1px solid rgba(63,63,70,.2)' }}>
             <div style={{ padding: '16px 24px', color: '#71717a', fontSize: '11px', fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' }}>{t.comparison.colFeature}</div>
             <div style={{ padding: '16px 24px', color: '#71717a', fontSize: '11px', fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase', borderLeft: '1px solid rgba(63,63,70,.2)' }}>{t.comparison.colBefore}</div>
             <div style={{ padding: '16px 24px', color: '#34c98a', fontSize: '11px', fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase', borderLeft: '1px solid rgba(63,63,70,.2)', background: 'rgba(52,201,138,.04)' }}>{t.comparison.colAfter}</div>
@@ -47,13 +47,14 @@ export default function Comparison() {
           {ROWS.map((row, i) => (
             <motion.div
               key={row.label}
+              className="cmp-row"
               initial={{ opacity: 0, x: -16 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.55, delay: i * 0.07, ease: [.16,1,.3,1] }}
               style={{ display: 'grid', gridTemplateColumns: '2fr 3fr 3fr', borderBottom: i < ROWS.length - 1 ? '1px solid rgba(63,63,70,.14)' : 'none' }}
             >
-              <div style={{ padding: '18px 24px', color: '#fafafa', fontSize: '14px', fontWeight: 400, display: 'flex', alignItems: 'center' }}>
+              <div className="cmp-label" style={{ padding: '18px 24px', color: '#fafafa', fontSize: '14px', fontWeight: 400, display: 'flex', alignItems: 'center' }}>
                 {row.label}
               </div>
               <div style={{ padding: '18px 24px', borderLeft: '1px solid rgba(63,63,70,.14)', display: 'flex', alignItems: 'center', gap: '10px' }}>

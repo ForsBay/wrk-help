@@ -65,9 +65,11 @@ export default function Nav() {
         backdropFilter: scrolled ? 'blur(20px)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
         borderBottom: scrolled ? '1px solid rgba(63,63,70,.18)' : '1px solid transparent',
+        // Stay clear of the notch / Dynamic Island and respect side cutouts.
+        paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
 
         {/* Logo */}
         <motion.a

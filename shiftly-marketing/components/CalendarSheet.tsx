@@ -1,31 +1,43 @@
 'use client'
 
 import { motion, useScroll, useTransform } from 'framer-motion'
-import { useRef, ReactNode } from 'react'
+import { useRef, useState, useEffect, ReactNode } from 'react'
+import { usePerfFlags } from '@/lib/perf-context'
 
-/* A section rendered as a bound calendar leaf. As you scroll it into view the
-   page swings down on its top binding (rotateX → 0), like turning a desk-calendar
-   page; scrolling back up flips it part-way open again (scroll-linked). */
+/* A section rendered as a bound calendar leaf. On desktop it swings down on its
+   top binding (rotateX → 0) as you scroll — a scroll-linked 3D transform.
+   On touch devices that scroll-driven 3D is dropped entirely (it repaints a big
+   GPU layer every frame); the sheet is shown flat with a light fade instead. */
 export default function CalendarSheet({ children, tab }: { children: ReactNode; tab?: string }) {
   const ref = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start end', 'center center'],
-  })
+  const { isMobile } = usePerfFlags()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  const flat = mounted && isMobile // SSR/first paint use the desktop markup → no hydration mismatch
+
+  const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'center center'] })
   const rotateX = useTransform(scrollYProgress, [0, 1], [58, 0])
   const opacity = useTransform(scrollYProgress, [0, 0.35], [0, 1])
   const shadow  = useTransform(scrollYProgress, [0, 1], [0.6, 0])
+  // Hooks must be called unconditionally — compute the scroll-linked shadow here,
+  // then pick a static value below when flat.
+  const boxShadowMv = useTransform(shadow, (s) => `0 ${30 * (s as number) + 18}px ${60 * (s as number) + 40}px -30px rgba(0,0,0,${0.4 + 0.4 * (s as number)})`)
 
   const RINGS = Array.from({ length: 26 })
 
   return (
-    <div ref={ref} style={{ perspective: '2200px', padding: '56px 16px 8px' }}>
+    <div ref={ref} style={{ perspective: flat ? 'none' : '2200px', padding: flat ? '24px 16px 8px' : '56px 16px 8px' }}>
       <motion.div
+        initial={flat ? { opacity: 0, y: 18 } : undefined}
+        whileInView={flat ? { opacity: 1, y: 0 } : undefined}
+        viewport={flat ? { once: true, margin: '-12% 0px' } : undefined}
+        transition={flat ? { duration: 0.5, ease: [0.16, 1, 0.3, 1] } : undefined}
         style={{
-          rotateX, opacity,
+          rotateX: flat ? 0 : rotateX,
+          opacity: flat ? undefined : opacity,
           transformOrigin: 'top center',
-          transformStyle: 'preserve-3d',
-          willChange: 'transform',
+          transformStyle: flat ? 'flat' : 'preserve-3d',
+          willChange: flat ? 'auto' : 'transform',
           maxWidth: '1180px',
           margin: '0 auto',
           position: 'relative',
@@ -64,7 +76,7 @@ export default function CalendarSheet({ children, tab }: { children: ReactNode; 
           borderRadius: '20px',
           overflow: 'hidden',
           paddingTop: '12px',
-          boxShadow: useTransform(shadow, (s) => `0 ${30 * (s as number) + 18}px ${60 * (s as number) + 40}px -30px rgba(0,0,0,${0.4 + 0.4 * (s as number)})`),
+          boxShadow: flat ? '0 18px 40px -30px rgba(0,0,0,.5)' : boxShadowMv,
         }}>
           {tab && (
             <span style={{

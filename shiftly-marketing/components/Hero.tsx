@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { useLang } from '@/lib/i18n'
 import { usePerfFlags } from '@/lib/perf-context'
 import ScreenGallery from './ScreenGallery'
+import HeroMobile from './HeroMobile'
 
 /* Laptop screen geometry — fractions of the desk-pro.png box (1536×1024). */
 const SCREEN = { left: 30.5, top: 27.5, width: 37.0, height: 39.0 }
@@ -51,7 +52,12 @@ function MagneticButton({ children, className, style, onClick }: { children: Rea
 
 export default function Hero() {
   const { t } = useLang()
-  const { isFull, isLite } = usePerfFlags()
+  const { isFull, isLite, isMobile } = usePerfFlags()
+  // Render the desktop markup on the server + first client paint (so hydration
+  // matches), then swap to the mobile Hero after mount. The swap is hidden behind
+  // the brand splash, so there is no visible flash.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
   const sectionRef  = useRef<HTMLDivElement>(null)
   const sceneRef    = useRef<HTMLDivElement>(null)
   const textRef     = useRef<HTMLDivElement>(null)
@@ -133,6 +139,9 @@ export default function Hero() {
     const el = document.querySelector(href)
     if (el) el.scrollIntoView({ behavior: 'smooth' })
   }
+
+  // Touch devices get the purpose-built, instant, effect-free mobile Hero.
+  if (mounted && isMobile) return <HeroMobile />
 
   return (
     <div

@@ -17,21 +17,34 @@
 //      the device actually janks, regardless of its specs.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { getPlatform } from './platform'
+
 export type PerfTier = 'full' | 'mid' | 'lite'
 
 export interface PerfState {
   tier: PerfTier
   reducedMotion: boolean
+  /** Touch device (phone/tablet). Forces the native, effect-free experience
+      regardless of how powerful the device is — a flagship phone still gets the
+      instant, scroll-driven-effect-free Hero. */
+  mobile: boolean
+}
+
+/** Touch/mobile detection — delegates to the canonical Platform Service so the
+    whole app has a single source of device truth (phones & tablets are mobile). */
+export function detectMobile(): boolean {
+  return getPlatform().isMobile
 }
 
 /**
  * Score a device from static signals. Higher = more capable.
  * Kept deliberately simple and mirrored by PERF_INLINE_SCRIPT below.
  */
-export function scoreDevice(): { tier: PerfTier; reducedMotion: boolean; forced: boolean } {
+export function scoreDevice(): { tier: PerfTier; reducedMotion: boolean; mobile: boolean; forced: boolean } {
   if (typeof window === 'undefined') {
-    return { tier: 'full', reducedMotion: false, forced: false }
+    return { tier: 'full', reducedMotion: false, mobile: false, forced: false }
   }
+  const mobile = detectMobile()
 
   const nav = navigator as Navigator & {
     deviceMemory?: number
@@ -44,7 +57,7 @@ export function scoreDevice(): { tier: PerfTier; reducedMotion: boolean; forced:
   const slowNet = conn?.effectiveType === 'slow-2g' || conn?.effectiveType === '2g'
 
   // Hard overrides → lite immediately.
-  if (saveData || slowNet) return { tier: 'lite', reducedMotion, forced: true }
+  if (saveData || slowNet) return { tier: 'lite', reducedMotion, mobile, forced: true }
 
   let score = 0
   const cores = nav.hardwareConcurrency || 0
@@ -62,7 +75,7 @@ export function scoreDevice(): { tier: PerfTier; reducedMotion: boolean; forced:
   if (window.matchMedia?.('(min-width: 1024px) and (pointer: fine)').matches) score += 1
 
   const tier: PerfTier = score >= 3 ? 'full' : score >= 0 ? 'mid' : 'lite'
-  return { tier, reducedMotion, forced: false }
+  return { tier, reducedMotion, mobile, forced: false }
 }
 
 /**
@@ -104,13 +117,15 @@ export function downgrade(tier: PerfTier): PerfTier {
 export const PERF_INLINE_SCRIPT = `(function(){try{
 var d=document.documentElement,n=navigator,m=window.matchMedia;
 var rm=m&&m('(prefers-reduced-motion: reduce)').matches;
+var mob=m&&m('(hover: none) and (pointer: coarse)').matches;
+if(mob)d.setAttribute('data-mobile','true');
+if(rm)d.setAttribute('data-reduced-motion','true');
 var c=(n.connection||{});
-if(c.saveData===true||c.effectiveType==='slow-2g'||c.effectiveType==='2g'){d.setAttribute('data-perf','lite');if(rm)d.setAttribute('data-reduced-motion','true');return;}
+if(c.saveData===true||c.effectiveType==='slow-2g'||c.effectiveType==='2g'){d.setAttribute('data-perf','lite');return;}
 var s=0,cores=n.hardwareConcurrency||0,mem=n.deviceMemory||0;
 if(cores>=8)s+=2;else if(cores>=4)s+=1;else if(cores>0&&cores<4)s-=1;
 if(mem>=8)s+=2;else if(mem>=4)s+=1;else if(mem>0&&mem<4)s-=2;
 if(m&&m('(pointer: coarse)').matches)s-=1;
 if(m&&m('(min-width: 1024px) and (pointer: fine)').matches)s+=1;
 d.setAttribute('data-perf',s>=3?'full':s>=0?'mid':'lite');
-if(rm)d.setAttribute('data-reduced-motion','true');
 }catch(e){document.documentElement.setAttribute('data-perf','mid');}})();`
