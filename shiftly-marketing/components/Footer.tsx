@@ -32,7 +32,7 @@ export default function Footer() {
   }
 
   return (
-    <footer style={{ background: '#08080a', borderTop: '1px solid rgba(63,63,70,.16)', padding: '72px 24px 40px' }}>
+    <footer className="cv-section" style={{ background: '#08080a', borderTop: '1px solid rgba(63,63,70,.16)', padding: '72px 24px 40px' }}>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
 
         {/* Top row */}

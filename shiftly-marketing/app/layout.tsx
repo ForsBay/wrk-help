@@ -5,6 +5,8 @@ import SmoothScroll from '@/components/SmoothScroll'
 import ScrollProgress from '@/components/ScrollProgress'
 import PageIntro from '@/components/PageIntro'
 import { LangProvider } from '@/lib/i18n'
+import { PerfProvider } from '@/lib/perf-context'
+import { PERF_INLINE_SCRIPT } from '@/lib/performance'
 
 const manrope = Manrope({
   subsets: ['latin', 'cyrillic'],
@@ -66,7 +68,7 @@ export const metadata: Metadata = {
       'Create employee schedules in minutes. Manage shifts, availability, vacations and payroll from one modern dashboard.',
     images: [
       {
-        url: '/og.png',
+        url: '/og.jpg',
         width: 1200,
         height: 630,
         alt: 'Shiftly — Smart Employee Scheduling',
@@ -80,7 +82,7 @@ export const metadata: Metadata = {
     title: 'Shiftly | Smart Employee Scheduling',
     description:
       'Create employee schedules in minutes. Manage shifts, availability, vacations and payroll from one modern dashboard.',
-    images: ['/og.png'],
+    images: ['/og.jpg'],
     creator: '@shiftlyapp',
   },
 
@@ -98,13 +100,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${manrope.variable} ${manrope.className}`}>
-        <LangProvider>
-          <PageIntro />
-          <ScrollProgress />
-          <SmoothScroll>
-            {children}
-          </SmoothScroll>
-        </LangProvider>
+        {/* Sets <html data-perf> before first paint so heavy effects are gated
+            without a flash. Runs synchronously, ahead of the React tree. */}
+        <script dangerouslySetInnerHTML={{ __html: PERF_INLINE_SCRIPT }} />
+        <PerfProvider>
+          <LangProvider>
+            <PageIntro />
+            <ScrollProgress />
+            <SmoothScroll>
+              {children}
+            </SmoothScroll>
+          </LangProvider>
+        </PerfProvider>
       </body>
     </html>
   )

@@ -50,7 +50,7 @@ export default function Testimonials() {
   const duplicated = [...ts.items, ...ts.items]
 
   return (
-    <section style={{ background: 'transparent', position: 'relative', padding: '96px 0', overflow: 'hidden' }}>
+    <section className="cv-section" style={{ background: 'transparent', position: 'relative', padding: '96px 0', overflow: 'hidden' }}>
       <div style={{ maxWidth: '760px', margin: '0 auto', padding: '0 24px', marginBottom: '52px' }}>
         <motion.div
           initial={{ opacity: 0, y: 24 }}

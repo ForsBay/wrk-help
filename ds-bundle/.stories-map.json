@@ -1,0 +1,103 @@
+{
+  "global": "ShiftlyMarketing",
+  "pkg": "shiftly-marketing",
+  "pkgDir": "C:\\Users\\Vlado\\Documents\\GitHub\\wrk-help\\shiftly-marketing\\node_modules\\shiftly-marketing",
+  "extraEntries": [],
+  "exported": [
+    "Comparison",
+    "CtaSection",
+    "Features",
+    "Footer",
+    "Hero",
+    "InteractiveShowcase",
+    "Nav",
+    "Platforms",
+    "Stats",
+    "Testimonials"
+  ],
+  "storybookStatic": null,
+  "keyRecipe": 7,
+  "cfgSliceGlobal": "a139d95ad8ab0a8ba08b44a258c54602e36090304087f48fe923c61aa5a8ae08",
+  "components": [
+    {
+      "name": "Comparison",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "CtaSection",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Features",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Footer",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Hero",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "InteractiveShowcase",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Nav",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Platforms",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Stats",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    },
+    {
+      "name": "Testimonials",
+      "group": "general",
+      "srcSha": null,
+      "sourceKey": "39e99120b35f12f2",
+      "cfgSlice": "5ff899b099eb6923833804cda955efdd69101524bec86f67dac5537cd81802e8",
+      "stories": []
+    }
+  ]
+}

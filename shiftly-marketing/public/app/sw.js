@@ -1,7 +1,14 @@
 // Scope: /app/ (the SW lives at /app/sw.js, so it only ever controls /app/*).
 // Bump this on any deploy where you want to force-clear the offline cache.
-const CACHE_NAME = 'shiftly-app-v5';
-const PRECACHE = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE_NAME = 'shiftly-app-v6';
+const PRECACHE = [
+  './', './index.html', './manifest.json', './icon-192.png', './icon-512.png',
+  // Universal calendar-providers layer (ES modules).
+  './providers/index.js', './providers/types.js', './providers/platform.js',
+  './providers/registry.js', './providers/google.js', './providers/outlook.js',
+  './providers/apple.js', './providers/samsung.js', './providers/ics.js',
+  './providers/account-manager.js', './providers/sync-engine.js',
+];
 
 self.addEventListener('install', event => {
   self.skipWaiting();

@@ -1,5 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap');
-
+/* Manrope is self-hosted via next/font (app/layout.tsx). The previous
+   render-blocking @import from Google Fonts was a duplicate download and has
+   been removed — one fewer blocking request on first paint. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -54,6 +55,11 @@ input  { font-family: var(--font-manrope); }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+/* Skip layout/paint for off-screen sections until they scroll near the viewport.
+   contain-intrinsic-size reserves space so the scrollbar doesn't jump.
+   (rendering-content-visibility — Vercel react-best-practices) */
+.cv-section { content-visibility: auto; contain-intrinsic-size: 0 720px; }
 
 /* ── Section reveal ─────────────────────────────────────────────────
    Motion is now driven by CalendarSheet / FlipSection wrappers, so content
@@ -232,4 +238,77 @@ input  { font-family: var(--font-manrope); }
   pointer-events: none;
   opacity: 0.02;
   z-index: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PERFORMANCE TIERS — gate class-based / global effects.
+   Component-level effects (Hero glows, Lenis, 3D sheets) are gated in JS
+   via usePerf(). These rules cover the CSS-only decorations.
+   data-perf is set before paint by PERF_INLINE_SCRIPT.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Accessibility hard stop — honor the OS "reduce motion" setting everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  .scroll-track { animation: none !important; }
+}
+
+/* ── MID — keep the look, cut the cost of the heaviest continuous paints ── */
+html[data-perf="mid"] .hero-particle { animation-duration: 26s !important; } /* fewer repaints/sec */
+html[data-perf="mid"] .noise::after  { display: none; }                      /* grain isn't worth it */
+/* halve the glow blur radius — visually similar, far cheaper to rasterize */
+html[data-perf="mid"] .hero-glow-layer > div { filter: blur(26px) !important; }
+html[data-perf="mid"] .hero-sweep-layer       { display: none; }             /* sweep is subtle, drop it */
+
+/* ── LITE — replace expensive GPU work with cheap static equivalents ── */
+html[data-perf="lite"] .hero-particle    { display: none; }                  /* pure decoration */
+html[data-perf="lite"] .hero-glow-layer,
+html[data-perf="lite"] .hero-sweep-layer { display: none; }                  /* animated big blur — the GPU killer */
+html[data-perf="lite"] .noise::after  { display: none; }
+html[data-perf="lite"] .orb           { animation: none !important; filter: blur(38px) !important; }
+html[data-perf="lite"] .scroll-track  { animation-duration: 80s !important; } /* slow, calm marquee */
+/* backdrop-filter is one of the most expensive paints — swap for a solid tint */
+html[data-perf="lite"] .glass-chip,
+html[data-perf="lite"] .cta-ghost {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(20, 20, 24, 0.92) !important;
+}
+/* drop the CTA shine sweep (pseudo-element animation) in lite */
+html[data-perf="lite"] .cta-primary::after { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE & TOUCH ERGONOMICS — not just a shrunk desktop.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* No accidental horizontal scroll from full-bleed scenes. */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* Touch devices: every interactive control gets a comfortable thumb target. */
+@media (hover: none) and (pointer: coarse) {
+  nav a, nav button { min-height: 44px; display: inline-flex; align-items: center; }
+  .dl-btn { min-height: 48px; }                 /* download buttons */
+  .cta-primary, .cta-ghost, .btn-primary, .btn-ghost { min-height: 46px; }
+  input, .tmin, .hin, .rin { min-height: 44px; } /* form fields */
+  /* the language switch pills are tiny on desktop — enlarge for fingers */
+  nav [role="button"], nav .lang-pill { min-height: 40px; }
+}
+
+/* Phones (portrait): tighten the generous desktop vertical rhythm so the page
+   isn't an endless scroll, and keep side gutters thumb-safe. */
+@media (max-width: 640px) {
+  section { padding-left: max(16px, env(safe-area-inset-left));
+            padding-right: max(16px, env(safe-area-inset-right)); }
+  .cv-section { contain-intrinsic-size: 0 560px; } /* shorter sections on mobile */
+  /* marquee cards shouldn't exceed the viewport width */
+  .scroll-track > * { max-width: 86vw; }
+}
+
+/* Tablets (portrait): use the extra width without jumping to the desktop grid. */
+@media (min-width: 641px) and (max-width: 1024px) {
+  section { padding-left: 28px; padding-right: 28px; }
 }

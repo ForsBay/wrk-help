@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import { useLang } from '@/lib/i18n'
+import { usePerfFlags } from '@/lib/perf-context'
 import ScreenGallery from './ScreenGallery'
 
 /* Laptop screen geometry — fractions of the desk-pro.png box (1536×1024). */
@@ -50,6 +51,7 @@ function MagneticButton({ children, className, style, onClick }: { children: Rea
 
 export default function Hero() {
   const { t } = useLang()
+  const { isFull, isLite } = usePerfFlags()
   const sectionRef  = useRef<HTMLDivElement>(null)
   const sceneRef    = useRef<HTMLDivElement>(null)
   const textRef     = useRef<HTMLDivElement>(null)
@@ -74,6 +76,17 @@ export default function Hero() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // LITE / reduced-motion: no GSAP pin/scrub. Show the "landed" product showcase
+    // statically and fade the intro text away — keeps the gallery, drops the
+    // single heaviest scroll-driven effect.
+    if (isLite) {
+      const sc = showcaseRef.current, tx = textRef.current
+      if (sc) { sc.style.opacity = '1'; sc.style.visibility = 'visible' }
+      if (tx) { tx.style.opacity = '0'; tx.style.pointerEvents = 'none' }
+      return
+    }
+
     let ctx: any
     let cancelled = false
 
@@ -106,9 +119,10 @@ export default function Hero() {
     }
     init()
     return () => { cancelled = true; ctx?.revert() }
-  }, [])
+  }, [isLite])
 
   const onMove = (e: React.MouseEvent) => {
+    if (!isFull) return // mouse parallax is full-tier only
     mx.set(e.clientX / window.innerWidth - 0.5)
     my.set(e.clientY / window.innerHeight - 0.5)
   }
@@ -139,8 +153,22 @@ export default function Hero() {
         }}
       >
         <motion.div style={{ position: 'absolute', inset: 0, rotateX: tiltX, rotateY: tiltY, transformStyle: 'preserve-3d', willChange: 'transform' }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/hero/desk-pro.png" alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          {/* LCP image. Modern formats via <picture> (AVIF 88KB / WebP 116KB vs
+              1.9MB PNG) — host-agnostic, no image optimizer required. fetchPriority
+              high so the browser starts it immediately. */}
+          <picture>
+            <source srcSet="/hero/desk-pro.avif" type="image/avif" />
+            <source srcSet="/hero/desk-pro.webp" type="image/webp" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/hero/desk-pro.png"
+              alt=""
+              // @ts-expect-error fetchpriority is valid HTML, not yet in React types
+              fetchpriority="high"
+              decoding="async"
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          </picture>
           {/* Bloom from the lit screen as we approach */}
           <div ref={glowRef} style={{
             position: 'absolute', left: `${SCREEN.left - 4}%`, top: `${SCREEN.top - 4}%`,
@@ -152,7 +180,7 @@ export default function Hero() {
       </div>
 
       {/* ── Living atmosphere: drifting glows (parallax + blend) ── */}
-      <motion.div style={{ position: 'absolute', inset: 0, x: glowX, y: glowY, zIndex: 2, pointerEvents: 'none', mixBlendMode: 'screen' }}>
+      <motion.div className="hero-glow-layer" style={{ position: 'absolute', inset: 0, x: glowX, y: glowY, zIndex: 2, pointerEvents: 'none', mixBlendMode: 'screen' }}>
         <div style={{
           position: 'absolute', left: '50%', top: '34%', width: '46vw', height: '46vw',
           transform: 'translate(-50%,-50%)',
@@ -173,7 +201,7 @@ export default function Hero() {
       </motion.div>
 
       {/* ── Slow light sweep across the scene ── */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', overflow: 'hidden' }}>
+      <div className="hero-sweep-layer" style={{ position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', overflow: 'hidden' }}>
         <div style={{
           position: 'absolute', top: '-20%', left: 0, width: '22%', height: '140%',
           background: 'linear-gradient(90deg, transparent, rgba(190,255,228,.06), transparent)',

@@ -1,16 +1,22 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useLang }   from '@/lib/i18n'
 import Nav         from '@/components/Nav'
 import Hero        from '@/components/Hero'
-import Features    from '@/components/Features'
-import Stats       from '@/components/Stats'
-import Comparison  from '@/components/Comparison'
-import Testimonials from '@/components/Testimonials'
-import CTA         from '@/components/CTA'
-import Footer      from '@/components/Footer'
-import FlipSection from '@/components/FlipSection'
 import CalendarSheet from '@/components/CalendarSheet'
+import FlipSection from '@/components/FlipSection'
+
+// Above-the-fold (Nav + Hero) ships in the initial chunk. Everything below the
+// fold is code-split with next/dynamic so it doesn't weigh down first load /
+// TTI. ssr:true keeps the HTML for SEO while still splitting the client JS.
+// (bundle-dynamic-imports — Vercel react-best-practices)
+const Features     = dynamic(() => import('@/components/Features'))
+const Stats        = dynamic(() => import('@/components/Stats'))
+const Comparison   = dynamic(() => import('@/components/Comparison'))
+const Testimonials = dynamic(() => import('@/components/Testimonials'))
+const CTA          = dynamic(() => import('@/components/CTA'))
+const Footer       = dynamic(() => import('@/components/Footer'))
 
 export default function Home() {
   const { t } = useLang()

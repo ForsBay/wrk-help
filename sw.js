@@ -1,4 +1,4 @@
-const CACHE_NAME = 'work-hours-v4';
+const CACHE_NAME = 'work-hours-v5';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -9,7 +9,19 @@ self.addEventListener('install', event => {
         './index.html',
         './manifest.json',
         './icon-192.PNG',
-        './icon-512.PNG'
+        './icon-512.PNG',
+        // Universal calendar-providers layer (ES modules) — precached for offline.
+        './providers/index.js',
+        './providers/types.js',
+        './providers/platform.js',
+        './providers/registry.js',
+        './providers/google.js',
+        './providers/outlook.js',
+        './providers/apple.js',
+        './providers/samsung.js',
+        './providers/ics.js',
+        './providers/account-manager.js',
+        './providers/sync-engine.js'
       ]);
     })
   );

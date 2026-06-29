@@ -15,6 +15,22 @@
 <link rel="apple-touch-icon" sizes="152x152" href="icon-152.png">
 <link rel="apple-touch-icon" sizes="167x167" href="icon-167.png">
 <meta name="mobile-web-app-capable" content="yes">
+
+<!-- ── Calendar integrations config ──────────────────────────────────────────
+     Multi-account Google (personal + work) and calendar selection unlock when a
+     Google OAuth *Web* client id is set here. Get it from Google Cloud Console →
+     APIs & Services → Credentials (it begins with the Firebase project number
+     775094572168). Until then, a single primary-calendar account still works
+     through the existing Firebase Google sign-in (no regression). -->
+<script>
+  window.__shiftlyConfig = {
+    google:  { clientId: '' },   // e.g. '775094572168-xxxxx.apps.googleusercontent.com'
+    outlook: { clientId: '' },   // Azure app (Microsoft Graph) — planned
+  };
+</script>
+<!-- Universal calendar-providers layer (ES modules, no bundler). Exposes window.__calendars. -->
+<script type="module" src="./providers/index.js"></script>
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{color-scheme:dark}
@@ -278,6 +294,28 @@ html.light .signout{background:rgba(192,99,74,.09);border-color:rgba(192,99,74,.
 /* ── Profile lang seg: allow wrapping for many languages ── */
 .seg{flex-wrap:wrap}
 .seg button{min-width:40px}
+/* ── Integrations ── */
+.intg-entry{cursor:pointer}
+.intg-entry-sub{margin-top:8px;font-size:12px;color:#5E7A94;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.intg-chev{color:#5A8DF0;font-size:16px;font-weight:700}
+.intg-card{padding:14px 16px}
+.intg-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.intg-id{display:flex;align-items:center;gap:11px;min-width:0}
+.intg-ico{font-size:22px;line-height:1;flex-shrink:0}
+.intg-name{font-size:15px;font-weight:600;color:#D8E4F2;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.intg-rec{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#5A8DF0;background:rgba(90,141,240,.12);border:1px solid rgba(90,141,240,.3);border-radius:6px;padding:1px 6px}
+.intg-status{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-top:3px}
+.intg-note{margin-top:10px;font-size:12px;line-height:1.4;color:#5E7A94}
+.intg-connect{flex-shrink:0;background:#1A2740;border:1px solid #25406B;color:#9FC2F7;font-weight:600;font-size:13px;border-radius:10px;padding:8px 14px}
+.intg-connect:active{transform:translateY(1px)}
+.intg-acct{margin-top:12px;padding-top:12px;border-top:1px solid #1A2535}
+.intg-acct-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.intg-acct-email{font-size:12px;color:#8DA4BE;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.intg-disc{background:none;border:none;color:#E07A5F;font-size:12px;font-weight:600;padding:2px 4px}
+.intg-cals{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.intg-cal{font-size:12px;border-radius:8px;padding:6px 10px;border:1px solid #243349;background:#121C2D;color:#8DA4BE;cursor:pointer}
+.intg-cal.on{background:rgba(61,214,172,.12);border-color:rgba(61,214,172,.45);color:#9CE8CF}
+.intg-caldot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -489,7 +527,10 @@ async function deleteCalendarEvent(calId) {
 
 window.__fb = {
   signIn, signOut: signOutUser, push, recordDelete,
-  ensureCalendarAccess, upsertCalendarEvent, deleteCalendarEvent
+  ensureCalendarAccess, upsertCalendarEvent, deleteCalendarEvent,
+  // Exposed so the universal GoogleProvider (firebase-mode account) can reuse the
+  // Calendar access token already granted by the Firebase Google sign-in.
+  getCalendarToken: () => (calToken && Date.now() < calExp ? calToken : null)
 };
 
 // Complete any pending redirect sign-in (PWA / mobile)
@@ -580,6 +621,10 @@ const I18N = {
     notSignedIn:'Not signed in', synced:'Synced', syncing:'Syncing…', syncOff:'Offline',
     yearSuffix:'',
     calendarSync:'Calendar sync', on:'On', off:'Off',
+    integrations:'Integrations', integrationsSub:'Connect your calendars — shifts sync automatically.',
+    addCalendar:'Add calendar', connectBtn:'Connect', disconnectBtn:'Disconnect', connectedLbl:'Connected',
+    notConnectedLbl:'Not connected', recommendedLbl:'Recommended', calsToSync:'Calendars to sync',
+    needsSetup:'Needs setup', requiresServer:'Requires a server', notOnWeb:'Not available on web', primaryCal:'Primary calendar',
     calendarNeedsSignIn:'Sign in with Google first', calTitle:'Work',
     calendarAuthFailed:'Calendar access was blocked. Add this Google account as an OAuth test user or publish and verify the app in Google Cloud.',
     exportData:'Export data', exportYear:'Export year (CSV)', exportBackup:'Full backup (JSON)',
@@ -599,6 +644,10 @@ const I18N = {
     notSignedIn:'Вход не выполнен', synced:'Синхронизировано', syncing:'Синхронизация…', syncOff:'Не в сети',
     yearSuffix:' год',
     calendarSync:'Синхронизация с календарём', on:'Вкл', off:'Выкл',
+    integrations:'Интеграции', integrationsSub:'Подключите календари — смены синхронизируются автоматически.',
+    addCalendar:'Добавить календарь', connectBtn:'Подключить', disconnectBtn:'Отключить', connectedLbl:'Подключено',
+    notConnectedLbl:'Не подключено', recommendedLbl:'Рекомендуется', calsToSync:'Календари для синхронизации',
+    needsSetup:'Требует настройки', requiresServer:'Нужен сервер', notOnWeb:'Недоступно в вебе', primaryCal:'Основной календарь',
     calendarNeedsSignIn:'Сначала войдите через Google', calTitle:'Работа',
     calendarAuthFailed:'Доступ к календарю заблокирован. Добавьте аккаунт Google как тестового пользователя OAuth или опубликуйте приложение в Google Cloud.',
     exportData:'Экспорт данных', exportYear:'Экспорт года (CSV)', exportBackup:'Полный бэкап (JSON)',
@@ -618,6 +667,10 @@ const I18N = {
     notSignedIn:'Nie zalogowano', synced:'Zsynchronizowano', syncing:'Synchronizacja…', syncOff:'Offline',
     yearSuffix:' rok',
     calendarSync:'Synchronizacja z kalendarzem', on:'Wł', off:'Wył',
+    integrations:'Integracje', integrationsSub:'Podłącz kalendarze — zmiany synchronizują się automatycznie.',
+    addCalendar:'Dodaj kalendarz', connectBtn:'Połącz', disconnectBtn:'Odłącz', connectedLbl:'Połączono',
+    notConnectedLbl:'Nie połączono', recommendedLbl:'Zalecane', calsToSync:'Kalendarze do synchronizacji',
+    needsSetup:'Wymaga konfiguracji', requiresServer:'Wymaga serwera', notOnWeb:'Niedostępne w wersji web', primaryCal:'Główny kalendarz',
     calendarNeedsSignIn:'Najpierw zaloguj się przez Google', calTitle:'Praca',
     calendarAuthFailed:'Dostęp do kalendarza zablokowany. Dodaj konto Google jako użytkownika testowego OAuth lub opublikuj aplikację w Google Cloud.',
     exportData:'Eksport danych', exportYear:'Eksport roku (CSV)', exportBackup:'Pełny backup (JSON)',
@@ -761,7 +814,7 @@ const I18N = {
   }
 };
 function L()    { return I18N[S.cfg.lang] || I18N.en; }
-function t(k)   { return L()[k]; }
+function t(k)   { const v = L()[k]; return v !== undefined ? v : I18N.en[k]; }
 function calendarErrorText() {
   if (!S.calError) return '';
   if (String(S.calError).startsWith('calendarApi:')) {
@@ -827,6 +880,8 @@ window.__app = {
   setUser(u) {
     S.user = u;
     if (!u) { S.sync = 'off'; S.profile = false; }
+    // Run calendar-layer migration once the Firebase user is known.
+    if (u && typeof calLayerGlue === 'function') calLayerGlue();
     render();
   },
   setSync(s) {
@@ -838,6 +893,7 @@ window.__app = {
     if (S.view === 'settings') render();
   },
   getState() { return { cfg:S.cfg, data:S.data }; },
+  getUser() { return S.user; },
   // Union-merge remote data into local. Cloud value wins on a conflicting day.
   mergeRemote(remote) {
     if (remote) {
@@ -1092,10 +1148,9 @@ function rStats() {
 function rSettings() {
   const d=S.dcfg, sym=CUR[d.cur]?.s||d.cur;
 
-  // Calendar connected indicator
-  const calConnected = d.calSync && !!S.user;
-  const calDotColor  = calConnected ? '#3DD6AC' : '#5E7A94';
-  const calStatusTxt = calConnected ? t('synced') : t('off');
+  // Calendar connected indicator — true when any account is connected via the
+  // universal layer, or (fallback) when legacy Google sync is on.
+  const calConnected = !!(window.__calendars && window.__calendars.isEnabled()) || (d.calSync && !!S.user);
 
   // Collapsible currency list
   const curOpen  = !!d.curOpen;
@@ -1144,19 +1199,14 @@ function rSettings() {
           <button class="mbtn${d.theme==='light'?' on':''}" onclick="setTheme('light')">${t('themeLight')}</button>
         </div>
       </div>
-      <div class="scard">
+      <div class="scard intg-entry" onclick="openIntegrations()">
         <div class="cal-hdr-row">
-          <span class="clbl" style="margin-bottom:0">${t('calendarSync')}</span>
-          <span class="cal-badge" style="color:${calDotColor}">
-            <span class="cal-dot" style="background:${calDotColor}"></span>${calStatusTxt}
+          <span class="clbl" style="margin-bottom:0">${t('integrations')}</span>
+          <span class="cal-badge" style="color:${calConnected?'#3DD6AC':'#5E7A94'}">
+            <span class="cal-dot" style="background:${calConnected?'#3DD6AC':'#5E7A94'}"></span>${calConnected?t('connectedLbl'):t('notConnectedLbl')}
           </span>
         </div>
-        <div class="mtoggle" style="margin-top:10px">
-          <button class="mbtn${!d.calSync?' on':''}" onclick="toggleCalSync(false)">${t('off')}</button>
-          <button class="mbtn${d.calSync?' on':''}" onclick="toggleCalSync(true)">${t('on')}</button>
-        </div>
-        ${!S.user?`<div style="color:#5E7A94;font-size:12px;margin-top:9px">${t('calendarNeedsSignIn')}</div>`:''}
-        ${S.calError?`<div style="color:#E07A5F;font-size:12px;line-height:1.35;margin-top:9px">${esc(calendarErrorText())}</div>`:''}
+        <div class="intg-entry-sub">${t('integrationsSub')} <span class="intg-chev">›</span></div>
       </div>
       <div class="scard">
         <div class="clbl">${t('exportData')}</div>
@@ -1262,6 +1312,80 @@ function rModal() {
   </div>`;
 }
 
+// ── INTEGRATIONS VIEW ──────────────────────────────────────────────────────
+function rIntegrations() {
+  const C = window.__calendars;
+  const catalog  = C ? C.getCatalog() : [];
+  const accounts = C ? C.getAccounts() : [];
+  const byType = {};
+  accounts.forEach(a => { (byType[a.providerType] = byType[a.providerType] || []).push(a); });
+  S.intgCals = S.intgCals || {};
+
+  const statusFor = (p, connected) => {
+    if (connected) return { txt: t('connectedLbl'),    col: '#3DD6AC' };
+    if (p.availability === 'unavailable')      return { txt: t('notOnWeb'),       col: '#5E7A94' };
+    if (p.availability === 'requires_backend') return { txt: t('requiresServer'), col: '#5E7A94' };
+    if (p.availability === 'requires_config')  return { txt: t('needsSetup'),     col: '#C8A24A' };
+    return { txt: t('notConnectedLbl'), col: '#5E7A94' };
+  };
+
+  const acctBlock = (a) => {
+    const cals = S.intgCals[a.id];
+    const sel = a.selectedCalendarIds || [];
+    let calsHtml;
+    if (Array.isArray(cals)) {
+      calsHtml = cals.map(c => {
+        const on = sel.includes(c.id);
+        const dot = c.color ? `<span class="intg-caldot" style="background:${esc(c.color)}"></span>` : '';
+        return `<button class="intg-cal${on?' on':''}" onclick="toggleCalendar('${esc(a.id)}','${esc(c.id)}')">${dot}${esc(c.name||c.id)}</button>`;
+      }).join('');
+    } else {
+      // Not loaded yet (or no calendarList scope) — show the primary selection.
+      calsHtml = `<button class="intg-cal on" onclick="loadCalendars('${esc(a.id)}')">${t('primaryCal')}</button>`;
+    }
+    return `<div class="intg-acct">
+      <div class="intg-acct-hdr">
+        <span class="intg-acct-email">${esc(a.email || a.label)}</span>
+        <button class="intg-disc" onclick="disconnectAccount('${esc(a.id)}')">${t('disconnectBtn')}</button>
+      </div>
+      <div class="clbl" style="margin:10px 0 0;font-size:11px">${t('calsToSync')}</div>
+      <div class="intg-cals">${calsHtml}</div>
+    </div>`;
+  };
+
+  const rows = catalog.map(p => {
+    const accts = byType[p.type] || [];
+    const connected = accts.length > 0;
+    const st = statusFor(p, connected);
+    const action = p.connectable
+      ? `<button class="intg-connect" onclick="connectProvider('${p.type}')">${connected?t('addCalendar'):t('connectBtn')}</button>`
+      : '';
+    return `<div class="scard intg-card">
+      <div class="intg-row">
+        <div class="intg-id">
+          <span class="intg-ico">${p.icon}</span>
+          <div>
+            <div class="intg-name">${esc(p.label)}${p.recommended?` <span class="intg-rec">${t('recommendedLbl')}</span>`:''}</div>
+            <div class="intg-status" style="color:${st.col}">${st.txt}</div>
+          </div>
+        </div>
+        ${action}
+      </div>
+      ${(p.note && !connected) ? `<div class="intg-note">${esc(p.note)}</div>` : ''}
+      ${accts.map(acctBlock).join('')}
+    </div>`;
+  }).join('');
+
+  return `<div class="view">
+    <div class="shdr"><button class="ibtn" onclick="closeIntegrations()">←</button><h2>${t('integrations')}</h2></div>
+    <div class="sbody">
+      ${!S.user ? `<div class="scard" style="color:#5E7A94;font-size:13px;line-height:1.4">${t('calendarNeedsSignIn')}</div>` : ''}
+      ${S.calError ? `<div class="scard" style="color:#E07A5F;font-size:12px;line-height:1.4">${esc(calendarErrorText())}</div>` : ''}
+      ${rows}
+    </div>
+  </div>`;
+}
+
 // ── Render ─────────────────────────────────────────────────────────────────
 function render() {
   document.documentElement.lang = S.cfg.lang;
@@ -1275,9 +1399,10 @@ function render() {
     document.getElementById('app').innerHTML = html;
     return;
   }
-  if      (S.view==='settings') html=rSettings();
-  else if (S.view==='stats')    html=rStats();
-  else                          html=rMain();
+  if      (S.view==='settings')     html=rSettings();
+  else if (S.view==='integrations') html=rIntegrations();
+  else if (S.view==='stats')        html=rStats();
+  else                              html=rMain();
   if (S.modal)   html+=rModal();
   if (S.profile) html+=rProfile();
   document.getElementById('app').innerHTML=html;
@@ -1487,6 +1612,52 @@ function openDay(d)    {
 function ovClick(e)    { if(e.target.classList.contains('overlay')){ S.modal=null; render(); } }
 function openCfg()     { S.dcfg={...S.cfg, curOpen:false, langOpen:false}; S.view='settings'; render(); }
 function closeCfg()    { S.view='main'; render(); }
+
+// ── Integrations actions ─────────────────────────────────────────────────────
+function openIntegrations()  { S.calError=null; S.view='integrations'; render(); }
+function closeIntegrations() { S.view='settings'; render(); }
+
+async function connectProvider(type) {
+  if (!window.__calendars) return;
+  S.calError = null;
+  try {
+    const acct = await window.__calendars.connect(type);
+    await loadCalendars(acct.id);            // populate the calendar picker
+    await syncMonthToCalendar();             // push the current month to the new target
+  } catch (e) {
+    S.calError = (e && e.code) || 'calendarAuthFailed';
+  }
+  render();
+}
+
+async function disconnectAccount(id) {
+  if (!window.__calendars) return;
+  await window.__calendars.disconnect(id);
+  if (S.intgCals) delete S.intgCals[id];
+  render();
+}
+
+async function loadCalendars(id) {
+  if (!window.__calendars) return;
+  S.intgCals = S.intgCals || {};
+  try {
+    S.intgCals[id] = await window.__calendars.listCalendars(id);
+  } catch (e) {
+    // No calendarList scope (firebase-mode) or transient error — offer primary only.
+    S.intgCals[id] = [{ id:'primary', name:t('primaryCal'), primary:true, writable:true }];
+  }
+  render();
+}
+
+function toggleCalendar(accId, calId) {
+  if (!window.__calendars) return;
+  const acct = window.__calendars.getAccounts().find(a => a.id === accId);
+  if (!acct) return;
+  const sel = new Set(acct.selectedCalendarIds || []);
+  if (sel.has(calId)) sel.delete(calId); else sel.add(calId);
+  window.__calendars.setSelectedCalendars(accId, [...sel]);
+  render();
+}
 function saveCfg()     { S.cfg={...S.dcfg}; save(); S.view='main'; render(); }
 function toggleCurList()  { S.dcfg.curOpen  = !S.dcfg.curOpen;  render(); }
 function toggleLangList() { S.dcfg.langOpen = !S.dcfg.langOpen; render(); }
@@ -1508,7 +1679,18 @@ function addH(hhmm, hrs) {
   total=((total%1440)+1440)%1440;
   return `${String(Math.floor(total/60)).padStart(2,'0')}:${String(total%60).padStart(2,'0')}`;
 }
+// True once any calendar account is connected through the universal layer.
+function calLayerEnabled() { return !!(window.__calendars && window.__calendars.isEnabled()); }
+
 function syncToCalendar(day,h,from,to) {
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const title=`${t('calTitle')} · ${fmt(h)}${L().hShort}`;
+  const notes=`${t('earnings')}: ${fmt(h*S.cfg.rate)} ${sym}`;
+  // Universal layer — fans out to every connected account & selected calendar.
+  if (calLayerEnabled()) {
+    return window.__calendars.syncShift({mo:S.mo,day,kind:'work',hours:h,from,to,title,notes,colorId:'9'});
+  }
+  // Legacy single-account Google path (kept as fallback — unchanged behavior).
   if (!(S.cfg.calSync && S.user && window.__fb)) return Promise.resolve(null);
   if (!S.calIds[S.mo]) S.calIds[S.mo]={};
   const calId=S.calIds[S.mo][day];
@@ -1516,13 +1698,18 @@ function syncToCalendar(day,h,from,to) {
     if (calId) { window.__fb.deleteCalendarEvent(calId); delete S.calIds[S.mo][day]; save(); }
     return Promise.resolve(null);
   }
-  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
-  const title=`${t('calTitle')} · ${fmt(h)}${L().hShort}`;
-  const notes=`${t('earnings')}: ${fmt(h*S.cfg.rate)} ${sym}`;
   return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId,colorId:'9'})
     .then(id=>{ if(id){ S.calIds[S.mo][day]=id; save(); } });
 }
 function syncOTToCalendar(day, h, from, to) {
+  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
+  const otData=S.ot[S.mo]&&S.ot[S.mo][day];
+  const otRate=otPct(otData);
+  const title=`${t('calTitle')} OT · ${fmt(h)}${L().hShort}`;
+  const notes=`${t('overtime')}: ${fmt(h)}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
+  if (calLayerEnabled()) {
+    return window.__calendars.syncShift({mo:S.mo,day,kind:'ot',hours:h,from,to,title,notes,colorId:'5'});
+  }
   if (!(S.cfg.calSync && S.user && window.__fb)) return Promise.resolve(null);
   if (!S.calIds[S.mo]) S.calIds[S.mo]={};
   const calKey=`${day}_ot`;
@@ -1531,11 +1718,6 @@ function syncOTToCalendar(day, h, from, to) {
     if (calId) { window.__fb.deleteCalendarEvent(calId); delete S.calIds[S.mo][calKey]; save(); }
     return Promise.resolve(null);
   }
-  const sym=CUR[S.cfg.cur]?.s||S.cfg.cur;
-  const otData=S.ot[S.mo]&&S.ot[S.mo][day];
-  const otRate=otPct(otData);
-  const title=`${t('calTitle')} OT · ${fmt(h)}${L().hShort}`;
-  const notes=`${t('overtime')}: ${fmt(h)}${L().hShort} × ${otRate}% = ${otEarn(otData).toFixed(0)} ${sym}`;
   return window.__fb.upsertCalendarEvent({mo:S.mo,day,from,to,title,notes,calId,colorId:'5'})
     .then(id=>{ if(id){ S.calIds[S.mo][calKey]=id; save(); } });
 }
@@ -1565,10 +1747,15 @@ function clearDay()    {
   const otCalId=S.calIds[S.mo]&&S.calIds[S.mo][`${day}_ot`];
   delEnt(day);
   if (S.ot[S.mo]) delete S.ot[S.mo][day];
-  if (calId && S.cfg.calSync && window.__fb) window.__fb.deleteCalendarEvent(calId);
-  if (otCalId && S.cfg.calSync && window.__fb) {
-    window.__fb.deleteCalendarEvent(otCalId);
-    if (S.calIds[S.mo]) delete S.calIds[S.mo][`${day}_ot`];
+  if (calLayerEnabled()) {
+    // Universal layer removes the day's events from every connected calendar.
+    window.__calendars.removeDay(S.mo, day);
+  } else {
+    if (calId && S.cfg.calSync && window.__fb) window.__fb.deleteCalendarEvent(calId);
+    if (otCalId && S.cfg.calSync && window.__fb) {
+      window.__fb.deleteCalendarEvent(otCalId);
+      if (S.calIds[S.mo]) delete S.calIds[S.mo][`${day}_ot`];
+    }
   }
   S.modal=null; render();
 }
@@ -1668,6 +1855,30 @@ function exportBackupJSON() {
   const payload={exportedAt:new Date().toISOString(), cfg:S.cfg, data:S.data, ot:S.ot};
   downloadFile(`shiftly-backup-${moKey()}.json`, JSON.stringify(payload,null,2), 'application/json');
 }
+
+// ── Universal calendar layer glue ───────────────────────────────────────────
+// Bridges the ES-module providers layer (window.__calendars) to the app: keeps
+// the legacy display flag in sync, re-renders on account changes, and migrates
+// existing calSync users to a connected Google account once — no extra popup.
+let __calMigrated = false;
+function calLayerGlue() {
+  const C = window.__calendars;
+  if (!C) return;
+  if (!calLayerGlue._bound) {
+    calLayerGlue._bound = true;
+    C.onChange(() => {
+      S.cfg.calSync = C.isEnabled();
+      if (S.view === 'settings' || S.view === 'integrations') render();
+    });
+  }
+  if (!__calMigrated && S.cfg.calSync && S.user && !C.hasAnyAccount()) {
+    const acc = C.adoptFirebaseGoogle(S.user);
+    C.importLegacy(S.calIds, acc.id, 'primary');
+    __calMigrated = true;
+  }
+  S.cfg.calSync = C.isEnabled();
+}
+window.addEventListener('calendars:ready', calLayerGlue);
 
 // ── Boot ───────────────────────────────────────────────────────────────────
 load();
