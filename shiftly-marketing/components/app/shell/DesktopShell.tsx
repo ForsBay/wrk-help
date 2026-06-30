@@ -18,6 +18,7 @@ import { useCalendarMonth } from '../features/calendar/useCalendarMonth'
 import { CalendarGrid } from '../features/calendar/CalendarGrid'
 import { CalendarToolbar, Density, CalView } from '../features/calendar/CalendarToolbar'
 import ShiftsDesktop from '../features/shifts/ShiftsDesktop'
+import { DashboardView } from '../features/dashboard/DashboardView'
 import { ContextPanel } from '../features/inspector/ContextPanel'
 import { SummaryStats } from '../features/summary/SummaryStats'
 import { EmptyState } from '../ui/EmptyState'
@@ -34,6 +35,7 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
   const [view, setView] = useState<CalView>('month')
   const [palette, setPalette] = useState(false)
   const [editor, setEditor] = useState<SheetMode>(null)   // the shared create/edit sheet
+  const [editorDate, setEditorDate] = useState<string | undefined>(undefined) // preset day for "new"
 
   // The 7 cells of the focused week (today's week, else first week with a shift).
   const weekCells = useMemo(() => {
@@ -45,7 +47,7 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
     return cs.slice(start, start + 7)
   }, [cal.cells])
 
-  const newShift = () => setEditor('new')
+  const newShift = (date?: string) => { setEditorDate(date); setEditor('new') }
   const editShift = (id: string) => { shifts.actions.select(id); setEditor('edit') }
   const sel = shifts.state.selectedIds
   const selectedRow = shifts.state.selectedId ? shifts.state.byId[shifts.state.selectedId] ?? null : null
@@ -69,20 +71,22 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
     ...(selectedRow ? [{ id: 'edit', label: 'Edit selected shift', hint: 'E', run: () => editShift(selectedRow.id) }] : []),
   ], [onSelect, cal, selectedRow])
 
-  const isCalendar = active === 'calendar' || active === 'dashboard'
-
   return (
     <div className={`dshell${collapsed ? ' rail-collapsed' : ''}`} data-density={density}>
       <Rail active={active} onSelect={onSelect} collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
 
       <main className="dworkspace">
-        {isCalendar ? (
+        {active === 'dashboard' ? (
+          <div className="dworkspace-body">
+            <DashboardView ctx={shifts} cal={cal} onNew={newShift} onOpen={(id) => shifts.actions.select(id)} />
+          </div>
+        ) : active === 'calendar' ? (
           <>
             <CalendarToolbar cal={cal} density={density} onDensity={setDensity} onNew={newShift} onPalette={() => setPalette(true)} rows={shifts.state.rows} view={view} onView={setView} />
             <div className="dworkspace-body">
               {view === 'agenda'
                 ? <ShiftsDesktop ctx={shifts} />
-                : <CalendarGrid ctx={shifts} cal={cal} cells={view === 'week' ? weekCells : undefined} variant={view === 'week' ? 'week' : 'month'} />}
+                : <CalendarGrid ctx={shifts} cal={cal} cells={view === 'week' ? weekCells : undefined} variant={view === 'week' ? 'week' : 'month'} onCreateDay={newShift} />}
             </div>
             <div className="dkpi">
               <SummaryStats totals={shifts.state.totals} />
@@ -104,7 +108,7 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
       </aside>
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />
-      <ShiftSheet mode={editor} row={editor === 'new' ? null : selectedRow} ctx={shifts} onClose={() => setEditor(null)} />
+      <ShiftSheet mode={editor} row={editor === 'new' ? null : selectedRow} ctx={shifts} onClose={() => setEditor(null)} presetDate={editorDate} />
     </div>
   )
 }

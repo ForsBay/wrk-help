@@ -13,6 +13,7 @@ export interface DayCellHandlers {
   onContext: (id: string, x: number, y: number) => void
   onDropShift: (shiftId: string, date: string) => void
   onEmptyClick: (date: string) => void
+  onCreateDay: (date: string) => void   // empty cell → open editor pre-filled for that day
 }
 
 function DayCellBase({ cell, selected, h }: { cell: DayCellData; selected: boolean; h: DayCellHandlers }) {
@@ -26,11 +27,22 @@ function DayCellBase({ cell, selected, h }: { cell: DayCellData; selected: boole
       onDragLeave={() => setOver(false)}
       onDrop={(e: DragEvent) => { setOver(false); const id = e.dataTransfer.getData('text/shift'); if (id) h.onDropShift(id, cell.date) }}
       onClick={() => { if (!s) h.onEmptyClick(cell.date) }}
+      onDoubleClick={() => { if (!s && cell.inMonth) h.onCreateDay(cell.date) }}
     >
       <div className="cal-daynum" style={{ color: cell.isWeekend ? 'rgba(248,113,113,.7)' : undefined }}>
         {cell.day}
         {cell.isToday && <span className="cal-today-dot" />}
       </div>
+
+      {!s && cell.inMonth && (
+        <button
+          className="cal-add"
+          onClick={(e) => { e.stopPropagation(); h.onCreateDay(cell.date) }}
+          title="Add a shift on this day"
+        >
+          + Fill day
+        </button>
+      )}
 
       {s && (() => {
         const cat = categoryOf(s.type)

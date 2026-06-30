@@ -32,27 +32,32 @@ const diffH = (from: string, to: string) => {
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
 interface Draft {
-  date: string; from: string; to: string; breakMin: string; rate: string
+  date: string; from: string; to: string; hours: string; breakMin: string; rate: string
   workplace: string; notes: string; type: ShiftType; planned: boolean; gcalSynced: boolean
 }
-const draftOf = (r?: ShiftRow | null): Draft => ({
-  date: r?.date ?? todayISO(),
-  from: r?.from ?? '09:00',
-  to: r?.to ?? '17:00',
-  breakMin: r?.breakMin != null ? String(r.breakMin) : '',
-  rate: r?.rate != null ? String(r.rate) : '',
-  workplace: r?.workplace ?? '',
-  notes: r?.notes ?? '',
-  type: r?.type ?? 'regular',
-  planned: r?.planned ?? true,
-  gcalSynced: r?.gcalSynced ?? false,
-})
+const draftOf = (r?: ShiftRow | null, presetDate?: string): Draft => {
+  const from = r?.from ?? '09:00'
+  const to = r?.to ?? '17:00'
+  return {
+    date: r?.date ?? presetDate ?? todayISO(),
+    from, to,
+    hours: r?.hours != null ? String(r.hours) : String(diffH(from, to)),
+    breakMin: r?.breakMin != null ? String(r.breakMin) : '',
+    rate: r?.rate != null ? String(r.rate) : '',
+    workplace: r?.workplace ?? '',
+    notes: r?.notes ?? '',
+    type: r?.type ?? 'regular',
+    planned: r?.planned ?? true,
+    gcalSynced: r?.gcalSynced ?? false,
+  }
+}
 
-export function ShiftSheet({ mode, row, ctx, onClose }: {
+export function ShiftSheet({ mode, row, ctx, onClose, presetDate }: {
   mode: SheetMode
   row: ShiftRow | null
   ctx: ShiftsContext
   onClose: () => void
+  presetDate?: string   // pre-fill the date when creating from an empty calendar day
 }) {
   const open = mode !== null
   const [editing, setEditing] = useState(false)
@@ -61,13 +66,16 @@ export function ShiftSheet({ mode, row, ctx, onClose }: {
 
   // Reset internal state whenever the sheet (re)opens for a different target.
   useEffect(() => {
-    if (open) { setEditing(mode === 'new' || mode === 'edit'); setDraft(draftOf(row)) }
-  }, [open, mode, row])
+    if (open) { setEditing(mode === 'new' || mode === 'edit'); setDraft(draftOf(row, presetDate)) }
+  }, [open, mode, row, presetDate])
 
   const set = (patch: Partial<Draft>) => setDraft(d => ({ ...d, ...patch }))
+  // Editing a time re-derives the (auto) duration; editing duration directly is kept.
+  const setFrom = (v: string) => setDraft(d => ({ ...d, from: v, hours: String(diffH(v, d.to)) }))
+  const setTo = (v: string) => setDraft(d => ({ ...d, to: v, hours: String(diffH(d.from, v)) }))
 
   const save = () => {
-    const hours = diffH(draft.from, draft.to)
+    const hours = Number(draft.hours) > 0 ? Number(draft.hours) : diffH(draft.from, draft.to)
     const rate = Number(draft.rate)
     const breakMin = Number(draft.breakMin)
     const patch: Partial<Shift> = {
@@ -104,11 +112,16 @@ export function ShiftSheet({ mode, row, ctx, onClose }: {
           <Field label="Date"><TextInput type="date" value={draft.date} onChange={v => set({ date: v })} /></Field>
           <Field label="Category"><CategoryPicker value={draft.type} onChange={t => set({ type: t })} /></Field>
           <div className="form-row">
-            <Field label="From" style={{ flex: 1 }}><TextInput type="time" value={draft.from} onChange={v => set({ from: v })} /></Field>
-            <Field label="To" style={{ flex: 1 }}><TextInput type="time" value={draft.to} onChange={v => set({ to: v })} /></Field>
+            <Field label="From" style={{ flex: 1 }}><TextInput type="time" value={draft.from} onChange={setFrom} /></Field>
+            <Field label="To" style={{ flex: 1 }}><TextInput type="time" value={draft.to} onChange={setTo} /></Field>
           </div>
           <div className="form-row">
-            <Field label="Duration" hint="auto" style={{ flex: 1 }}><div className="fld-readout">{diffH(draft.from, draft.to)}h</div></Field>
+            <Field label="Duration" hint="hours" style={{ flex: 1 }}>
+              <div className="dur-input">
+                <TextInput type="text" inputMode="decimal" value={draft.hours} onChange={v => set({ hours: v.replace(/[^0-9.]/g, '') })} placeholder="8" />
+                <span className="dur-suffix">h</span>
+              </div>
+            </Field>
             <Field label="Break" hint="min" style={{ flex: 1 }}><TextInput type="text" inputMode="numeric" value={draft.breakMin} onChange={v => set({ breakMin: v.replace(/[^0-9]/g, '') })} placeholder="0" /></Field>
           </div>
           <Field label="Workplace"><TextInput value={draft.workplace} onChange={v => set({ workplace: v })} placeholder="e.g. Warehouse A" /></Field>

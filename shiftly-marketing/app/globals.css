@@ -753,6 +753,55 @@ html[data-mobile] .cta-primary::after { display: none !important; }
   .conn-card:hover { border-color: var(--border-2); }
 }
 
+/* ── brand mark (logo square + S monogram) ──────────────────────────── */
+.brand-mark { display: grid; place-items: center; flex-shrink: 0;
+  background: linear-gradient(150deg, #41dd99, var(--accent));
+  box-shadow: 0 4px 14px -4px rgba(52,201,138,.55); }
+
+/* ── empty-day "Fill day" affordance in the calendar ─────────────────── */
+.cal-add { margin-top: auto; align-self: stretch; padding: 5px 6px; border: 1px dashed var(--border-2);
+  border-radius: 8px; background: transparent; color: var(--text-3); font-size: 11px; font-weight: 600;
+  cursor: pointer; opacity: 0; transition: opacity .12s ease, background .12s ease, color .12s ease, border-color .12s ease; }
+@media (hover: hover) and (pointer: fine) {
+  .cal-cell:hover .cal-add { opacity: 1; }
+  .cal-add:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+}
+@media (hover: none) { .cal-add { opacity: .45; } }
+
+/* ── editable duration field (number + 'h' suffix) ───────────────────── */
+.dur-input { position: relative; }
+.dur-input .fld-input { padding-right: 26px; }
+.dur-suffix { position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+  color: var(--text-3); font-size: 15px; pointer-events: none; }
+
+/* ── Desktop Dashboard (home / at-a-glance) ──────────────────────────── */
+.dash { display: flex; flex-direction: column; }
+.dash-head { display: flex; align-items: center; justify-content: space-between;
+  padding: 2px 0 16px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+.dash-title { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -.02em; }
+.dash-sub { font-size: 13px; color: var(--text-3); margin: 3px 0 0; }
+.dash-body { display: flex; flex-direction: column; gap: 22px; max-width: 780px; }
+.dash-today { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; cursor: pointer;
+  padding: 16px 16px 16px 18px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+  position: relative; overflow: hidden; transition: border-color .14s ease; }
+.dash-today:hover { border-color: var(--border-2); }
+.dash-today-rail { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.dash-today-icon { width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; }
+.dash-today-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dash-today-h { font-size: 16px; font-weight: 600; color: var(--text); }
+.dash-today-sub { font-size: 13px; color: var(--text-3); }
+.dash-today-pay { font-size: 20px; font-weight: 700; color: var(--accent); }
+.dash-week { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.dash-row { display: grid; grid-template-columns: auto 120px 110px 1fr auto; align-items: center; gap: 12px;
+  width: 100%; padding: 13px 16px; background: var(--surface); border: none; border-bottom: 1px solid var(--border);
+  cursor: pointer; text-align: left; color: var(--text); transition: background .12s ease; }
+.dash-row:last-child { border-bottom: none; }
+.dash-row:hover { background: var(--surface-2); }
+.dash-row-day { font-weight: 600; font-size: 14px; }
+.dash-row-time { color: var(--text-3); font-size: 13px; }
+.dash-row-wp { color: var(--text-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-row-pay { color: var(--accent); font-weight: 600; font-size: 14px; text-align: right; }
+
 /* ── shared editor as a centered modal on desktop (same component, different shell) */
 @media (min-width: 1024px) {
   .sheet-overlay { align-items: center; }

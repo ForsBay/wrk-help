@@ -4,6 +4,7 @@
 // model; collapses to an icon-only strip. Profile pinned to the bottom.
 import { RAIL_ITEMS, RAIL_PROFILE, ViewId } from '../nav'
 import { Icon } from '../ui/Icon'
+import { Logo } from '../ui/Logo'
 
 export function Rail({ active, onSelect, collapsed, onToggle }: {
   active: ViewId; onSelect: (v: ViewId) => void; collapsed: boolean; onToggle: () => void
@@ -22,7 +23,7 @@ export function Rail({ active, onSelect, collapsed, onToggle }: {
     <nav className={`rail${collapsed ? ' collapsed' : ''}`}>
       <div className="rail-top">
         <button className="rail-brand" onClick={onToggle} title="Toggle sidebar">
-          <span className="rail-logo" />
+          <Logo size={26} />
           {!collapsed && <span className="rail-brand-name">Shiftly</span>}
         </button>
       </div>

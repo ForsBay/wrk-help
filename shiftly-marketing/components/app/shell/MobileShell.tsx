@@ -18,6 +18,7 @@ import { MobileSettings } from '../features/settings/MobileSettings'
 import ShiftsMobile from '../features/shifts/ShiftsMobile'
 import { ShiftSheet, type SheetMode } from '../features/shifts/ShiftSheet'
 import { Icon } from '../ui/Icon'
+import { Logo } from '../ui/Logo'
 import { NAV_ITEMS } from '../nav'
 import type { ShellProps } from './types'
 
@@ -43,7 +44,7 @@ export default function MobileShell({ active, onSelect, shifts }: ShellProps) {
       <header className="m-header">
         <div className="m-header-row">
           <div className="m-brand">
-            <span className="m-brand-logo" />
+            <Logo size={30} radius={9} />
             <div>
               <h1 className="m-title">{title}</h1>
               {subtitle && <p className="m-subtitle">{subtitle}</p>}

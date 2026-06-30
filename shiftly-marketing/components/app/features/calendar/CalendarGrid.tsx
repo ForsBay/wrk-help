@@ -8,11 +8,12 @@ import type { ShiftsContext } from '../shifts/useShifts'
 import type { CalendarMonth } from './useCalendarMonth'
 import { DayCell, DayCellHandlers } from './DayCell'
 
-export function CalendarGrid({ ctx, cal, cells, variant = 'month' }: {
+export function CalendarGrid({ ctx, cal, cells, variant = 'month', onCreateDay }: {
   ctx: ShiftsContext
   cal: CalendarMonth
   cells?: import('./useCalendarMonth').DayCellData[]   // override (Week view)
   variant?: 'month' | 'week'
+  onCreateDay?: (date: string) => void                 // empty day → open editor
 }) {
   const { selectedIds } = ctx.state
   const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null)
@@ -33,6 +34,7 @@ export function CalendarGrid({ ctx, cal, cells, variant = 'month' }: {
     onContext: useCallback((id: string, x: number, y: number) => { ctx.actions.select(id); setMenu({ x, y, id }) }, [ctx.actions]),
     onDropShift: useCallback((id: string, date: string) => ctx.actions.move(id, date), [ctx.actions]),
     onEmptyClick: useCallback(() => ctx.actions.clearSelection(), [ctx.actions]),
+    onCreateDay: useCallback((date: string) => onCreateDay?.(date), [onCreateDay]),
   }
 
   const sel = new Set(selectedIds)
