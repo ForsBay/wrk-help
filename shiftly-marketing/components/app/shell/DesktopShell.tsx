@@ -19,7 +19,7 @@ import { CalendarGrid } from '../features/calendar/CalendarGrid'
 import { CalendarToolbar, Density } from '../features/calendar/CalendarToolbar'
 import { ContextPanel } from '../features/inspector/ContextPanel'
 import { SummaryStats } from '../features/summary/SummaryStats'
-import { Surface } from '../ui/Surface'
+import { EmptyState } from '../ui/EmptyState'
 import { useDesktopShortcuts } from '../hooks/useDesktopShortcuts'
 import type { Command } from '../CommandPalette'
 
@@ -71,9 +71,11 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
           </>
         ) : (
           <div className="dplaceholder">
-            <Surface padding={48} style={{ textAlign: 'center', color: 'var(--text-3)' }}>
-              {RAIL_ITEMS.find(i => i.id === active)?.label ?? 'Section'} — desktop view
-            </Surface>
+            <EmptyState
+              icon={RAIL_ITEMS.find(i => i.id === active)?.icon ?? 'grid'}
+              title={`${RAIL_ITEMS.find(i => i.id === active)?.label ?? 'Section'} coming soon`}
+              body="This workspace is under construction. Your calendar and shifts are fully live."
+            />
           </div>
         )}
       </main>

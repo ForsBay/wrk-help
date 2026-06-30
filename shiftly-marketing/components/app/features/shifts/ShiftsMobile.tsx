@@ -1,59 +1,62 @@
 'use client'
 
 // MOBILE variant of the Shifts feature — large tappable cards, one glance of
-// info, an inline expand for details + delete. No hover, no context menu, no
+// info, a category colour rail, a sync indicator, and a press animation. Tapping
+// a card opens the shared ShiftSheet (detail/edit). No hover, no context menu, no
 // table. Consumes the SAME shared `ShiftsContext` as the desktop table.
 import type { ShiftsContext } from './useShifts'
-import { Surface } from '../../ui/Surface'
+import { categoryOf } from './categories'
 import { Icon } from '../../ui/Icon'
+import { EmptyState } from '../../ui/EmptyState'
 
-export default function ShiftsMobile({ ctx }: { ctx: ShiftsContext }) {
-  const { rows, selectedId } = ctx.state
+export default function ShiftsMobile({ ctx, onOpen }: { ctx: ShiftsContext; onOpen: (id: string) => void }) {
+  const { rows } = ctx.state
+
+  if (rows.length === 0) {
+    return (
+      <EmptyState
+        icon="calendar"
+        title="No shifts yet"
+        body="Add your first shift and Shiftly will track your hours and pay automatically."
+      />
+    )
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      {rows.map(r => {
-        const open = r.id === selectedId
+    <div className="m-list">
+      {rows.map((r, i) => {
+        const cat = categoryOf(r.type)
         return (
-          <Surface key={r.id} padding={0} style={{ overflow: 'hidden' }}>
-            <button
-              onClick={() => ctx.actions.select(open ? null : r.id)}
-              style={{
-                width: '100%', minHeight: 64, padding: '14px 16px', background: 'transparent',
-                border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
-              }}
-            >
-              <div style={{ width: 44, height: 44, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-soft, rgba(52,201,138,.12))', color: 'var(--accent, #34c98a)' }}>
-                <Icon name="clock" size={22} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text, #fafafa)' }}>
-                  {r.f.date} · {r.weekday}
-                  {r.planned && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--accent)' }}>PLAN</span>}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--text-3, #71717a)', marginTop: 2 }}>{r.f.hours} · {r.f.range}</div>
-              </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent, #34c98a)' }}>{r.f.earnings}</div>
-                {r.overtime > 0 && <div style={{ fontSize: 12, color: 'var(--text-2)' }}>OT {r.f.overtime}</div>}
-              </div>
-            </button>
-
-            {open && (
-              <div style={{ padding: '0 16px 14px', display: 'flex', gap: 10 }}>
-                <button style={btn()} onClick={() => ctx.actions.select(null)}>Edit</button>
-                <button style={btn(true)} onClick={() => ctx.actions.remove(r.id)}>Delete</button>
-              </div>
-            )}
-          </Surface>
+          <button
+            key={r.id}
+            className="m-card"
+            style={{ animationDelay: `${Math.min(i, 8) * 28}ms` }}
+            onClick={() => onOpen(r.id)}
+          >
+            <span className="m-card-rail" style={{ background: cat.color }} />
+            <span className="m-card-icon" style={{ background: cat.soft, color: cat.color }}>
+              <Icon name="clock" size={21} />
+            </span>
+            <span className="m-card-main">
+              <span className="m-card-title">
+                {r.f.date} · {r.weekday}
+                {r.planned && <span className="pill-plan">Planned</span>}
+              </span>
+              <span className="m-card-sub">
+                {r.f.range}
+                {r.workplace && <> · {r.workplace}</>}
+              </span>
+            </span>
+            <span className="m-card-right">
+              <span className="m-card-pay">{r.f.earnings}</span>
+              <span className="m-card-meta">
+                {r.f.hours}{r.overtime > 0 && <span className="m-ot"> · OT {r.f.overtime}</span>}
+                <span className={`sync-dot${r.gcalSynced ? ' on' : ''}`} />
+              </span>
+            </span>
+          </button>
         )
       })}
     </div>
   )
 }
-
-const btn = (danger = false): React.CSSProperties => ({
-  flex: 1, minHeight: 46, borderRadius: 12, cursor: 'pointer', fontSize: 15, fontWeight: 600,
-  border: '1px solid ' + (danger ? 'rgba(248,113,113,.3)' : 'var(--border-2, #34343a)'),
-  background: danger ? 'rgba(248,113,113,.1)' : 'rgba(255,255,255,.04)',
-  color: danger ? '#f87171' : 'var(--text, #fafafa)',
-})

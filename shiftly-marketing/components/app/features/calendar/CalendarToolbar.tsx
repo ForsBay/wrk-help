@@ -3,6 +3,7 @@
 // Sticky toolbar above the calendar. Subtle glass here is justified (it floats
 // over scrolling content); it is disabled on lite/mobile by existing CSS gates.
 import type { CalendarMonth } from './useCalendarMonth'
+import { SyncStatus } from './SyncStatus'
 
 export type Density = 'comfortable' | 'compact'
 
@@ -23,6 +24,8 @@ export function CalendarToolbar({ cal, density, onDensity, onNew, onPalette }: {
       </div>
 
       <div className="cal-tb-right">
+        <SyncStatus />
+        <span className="tb-sep" />
         <div className="seg">
           <button className="seg-on">Month</button>
           <button className="seg-off" disabled>Week</button>

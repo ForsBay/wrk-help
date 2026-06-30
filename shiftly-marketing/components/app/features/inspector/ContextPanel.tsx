@@ -9,6 +9,8 @@ import type { CalendarMonth } from '../calendar/useCalendarMonth'
 import { ShiftInspector } from './ShiftInspector'
 import { SummaryStats } from '../summary/SummaryStats'
 import { Surface } from '../../ui/Surface'
+import { EmptyState } from '../../ui/EmptyState'
+import { categoryOf } from '../shifts/categories'
 
 export function ContextPanel({ ctx, cal }: { ctx: ShiftsContext; cal: CalendarMonth }) {
   const { selectedIds, selectedId, byId } = ctx.state
@@ -38,18 +40,25 @@ export function ContextPanel({ ctx, cal }: { ctx: ShiftsContext; cal: CalendarMo
 
       <PanelTitle style={{ marginTop: 22 }}>Upcoming</PanelTitle>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {cal.upcoming.length === 0 && <p style={{ color: 'var(--text-3)', fontSize: 13 }}>No upcoming shifts.</p>}
-        {cal.upcoming.map(r => (
-          <Surface key={r.id} padding={12} onClick={() => ctx.actions.select(r.id)} style={{ cursor: 'pointer' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>{r.f.date} · {r.weekday}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{r.f.range}</div>
+        {cal.upcoming.length === 0 ? (
+          <EmptyState compact icon="sparkle" title="All caught up" body="No upcoming shifts scheduled." />
+        ) : cal.upcoming.map(r => {
+          const cat = categoryOf(r.type)
+          return (
+            <Surface key={r.id} padding={12} onClick={() => ctx.actions.select(r.id)} className="up-card" style={{ cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                  <span className="cat-dot" style={{ background: cat.color, flexShrink: 0 }} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{r.f.date} · {r.weekday}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.f.range}{r.workplace ? ` · ${r.workplace}` : ''}</div>
+                  </div>
+                </div>
+                <div style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 14, flexShrink: 0 }}>{r.f.earnings}</div>
               </div>
-              <div style={{ color: 'var(--accent)', fontWeight: 600, fontSize: 14 }}>{r.f.earnings}</div>
-            </div>
-          </Surface>
-        ))}
+            </Surface>
+          )
+        })}
       </div>
     </div>
   )

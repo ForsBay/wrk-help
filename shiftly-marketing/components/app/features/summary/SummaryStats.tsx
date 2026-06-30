@@ -12,8 +12,10 @@ export function SummaryStats({ totals, direction = 'row', emphasize = false }: {
   emphasize?: boolean
 }) {
   const size = emphasize ? 'lg' : 'md'
+  // Row → responsive grid (4-up on wide, 2×2 on phones so values never clip);
+  // column → simple stack for the desktop side panel. Layout only, not a fork.
   return (
-    <div style={{ display: 'flex', flexDirection: direction, gap: 10, width: '100%' }}>
+    <div className={direction === 'column' ? 'sumstats-col' : 'sumstats-row'}>
       <StatTile value={totals.days} label="Days" size={size} />
       <StatTile value={totals.f.hours} label="Hours" size={size} />
       <StatTile value={totals.f.overtime} label="Overtime" size={size} />

@@ -14,6 +14,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useMemo, useState, useCallback } from 'react'
+import type { ShiftType } from './categories'
 
 export interface Shift {
   id: string
@@ -29,6 +30,7 @@ export interface Shift {
   workplace?: string
   notes?: string
   gcalSynced?: boolean
+  type?: ShiftType    // colour category (defaults to `regular` everywhere)
 }
 
 export interface ShiftRow extends Shift {
@@ -54,6 +56,7 @@ export interface ShiftsActions {
   duplicate: (id: string) => void
   move: (id: string, newDate: string) => void  // drag & drop
   update: (id: string, patch: Partial<Shift>) => void
+  add: (draft: Omit<Shift, 'id' | 'weekday'>) => void  // create from the new-shift form
 }
 export interface ShiftsMeta { rate: number; currency: string }
 export interface ShiftsContext { state: ShiftsState; actions: ShiftsActions; meta: ShiftsMeta }
@@ -62,12 +65,12 @@ const RATE = 31.4
 const CUR = 'zł'
 
 const SEED: Shift[] = [
-  { id: 'd1', date: '2026-06-22', weekday: 'Mon', from: '09:00', to: '17:30', hours: 8.5, overtime: 0,   planned: false, breakMin: 30, workplace: 'Warehouse A', notes: 'Inventory day', gcalSynced: true },
-  { id: 'd2', date: '2026-06-23', weekday: 'Tue', from: '09:00', to: '18:00', hours: 9,   overtime: 0.5, planned: false, breakMin: 30, workplace: 'Warehouse A', gcalSynced: true },
-  { id: 'd3', date: '2026-06-24', weekday: 'Wed', from: '08:00', to: '16:00', hours: 8,   overtime: 0,   planned: false, breakMin: 45, workplace: 'Depot',       gcalSynced: false },
-  { id: 'd4', date: '2026-06-25', weekday: 'Thu', from: '09:00', to: '19:00', hours: 10,  overtime: 2,   planned: false, breakMin: 30, workplace: 'Warehouse A', notes: 'Covered late shift', gcalSynced: true },
-  { id: 'd5', date: '2026-06-26', weekday: 'Fri', from: '09:00', to: '17:00', hours: 8,   overtime: 0,   planned: false, breakMin: 30, workplace: 'Warehouse A', gcalSynced: true },
-  { id: 'd6', date: '2026-06-29', weekday: 'Mon', from: '09:00', to: '17:30', hours: 8.5, overtime: 0,   planned: true,  breakMin: 30, workplace: 'Warehouse A' },
+  { id: 'd1', date: '2026-06-22', weekday: 'Mon', from: '09:00', to: '17:30', hours: 8.5, overtime: 0,   planned: false, breakMin: 30, workplace: 'Warehouse A', notes: 'Inventory day', gcalSynced: true,  type: 'regular' },
+  { id: 'd2', date: '2026-06-23', weekday: 'Tue', from: '09:00', to: '18:00', hours: 9,   overtime: 0.5, planned: false, breakMin: 30, workplace: 'Warehouse A', gcalSynced: true,  type: 'overtime' },
+  { id: 'd3', date: '2026-06-24', weekday: 'Wed', from: '22:00', to: '06:00', hours: 8,   overtime: 0,   planned: false, breakMin: 45, workplace: 'Depot',       gcalSynced: false, type: 'night' },
+  { id: 'd4', date: '2026-06-25', weekday: 'Thu', from: '09:00', to: '19:00', hours: 10,  overtime: 2,   planned: false, breakMin: 30, workplace: 'Warehouse A', notes: 'Covered late shift', gcalSynced: true, type: 'overtime' },
+  { id: 'd5', date: '2026-06-26', weekday: 'Fri', from: '09:00', to: '13:00', hours: 4,   overtime: 0,   planned: false, breakMin: 0,  workplace: 'HQ',          gcalSynced: true,  type: 'training' },
+  { id: 'd6', date: '2026-06-29', weekday: 'Mon', from: '09:00', to: '17:30', hours: 8.5, overtime: 0,   planned: true,  breakMin: 30, workplace: 'Warehouse A', type: 'regular' },
 ]
 
 const num = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(1))
@@ -141,12 +144,17 @@ export function useShifts(): ShiftsContext {
   const update = useCallback((id: string, patch: Partial<Shift>) => {
     setShifts(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
   }, [])
+  const add = useCallback((draft: Omit<Shift, 'id' | 'weekday'>) => {
+    const id = `s${Date.now()}`
+    setShifts(prev => [...prev, { ...draft, id, weekday: weekdayOf(draft.date) }])
+    setSelectedIds([id])
+  }, [])
 
   const selectedId = selectedIds.length ? selectedIds[selectedIds.length - 1] : null
 
   return {
     state: { rows, byId, totals, selectedId, selectedIds },
-    actions: { select, toggleSelect, selectMany, clearSelection, remove, removeMany, duplicate, move, update },
+    actions: { select, toggleSelect, selectMany, clearSelection, remove, removeMany, duplicate, move, update, add },
     meta: { rate: RATE, currency: CUR },
   }
 }

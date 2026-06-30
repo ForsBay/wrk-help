@@ -5,17 +5,26 @@
 // update) — no business logic here.
 import { useState } from 'react'
 import type { ShiftsContext, ShiftRow } from '../shifts/useShifts'
+import { categoryOf } from '../shifts/categories'
 import { Icon } from '../../ui/Icon'
+import { useToast } from '../../ui/Toast'
 
 export function ShiftInspector({ row, actions }: { row: ShiftRow; actions: ShiftsContext['actions'] }) {
   const [editing, setEditing] = useState(false)
+  const cat = categoryOf(row.type)
+  const toast = useToast()
 
   return (
     <div className="insp">
       <div className="insp-head">
         <div>
           <div className="insp-date">{row.f.full}</div>
-          {row.planned && <span className="insp-badge">PLANNED</span>}
+          <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+            <span className="insp-cat" style={{ background: cat.soft, borderColor: cat.line }}>
+              <span className="cat-dot" style={{ background: cat.color }} />{cat.label}
+            </span>
+            {row.planned && <span className="insp-badge">PLANNED</span>}
+          </div>
         </div>
         <span className={`gcal-dot${row.gcalSynced ? ' on' : ''}`} title={row.gcalSynced ? 'Synced to Google Calendar' : 'Not synced'} />
       </div>
@@ -25,8 +34,15 @@ export function ShiftInspector({ row, actions }: { row: ShiftRow; actions: Shift
       <Field label="Pay"         value={row.f.earnings} icon="coin" accent />
       <Field label="Overtime"    value={row.f.overtime} />
       <Field label="Breaks"      value={row.f.breaks} />
-      <Field label="Workplace"   value={row.workplace || '—'} />
-      <Field label="Google Calendar" value={row.gcalSynced ? 'Synced' : 'Off'} />
+      <Field label="Workplace"   value={row.workplace || '—'} icon="briefcase" />
+
+      {/* Google Calendar — an actionable row, not just a read-out. */}
+      <button className="insp-sync" onClick={() => { actions.update(row.id, { gcalSynced: !row.gcalSynced }); toast.success(row.gcalSynced ? 'Removed from Google Calendar' : 'Synced to Google Calendar', 'sync') }}>
+        <span className="insp-field-k" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span className={`sync-dot${row.gcalSynced ? ' on' : ''}`} /> Google Calendar
+        </span>
+        <span className="insp-sync-act">{row.gcalSynced ? 'Synced' : 'Sync now'}</span>
+      </button>
 
       <div className="insp-label">Notes</div>
       {editing ? (
@@ -41,9 +57,9 @@ export function ShiftInspector({ row, actions }: { row: ShiftRow; actions: Shift
       )}
 
       <div className="insp-actions">
-        <button className="ghost-btn" onClick={() => setEditing(v => !v)}><Icon name="gear" size={15} /> Edit</button>
-        <button className="ghost-btn" onClick={() => actions.duplicate(row.id)}><Icon name="plus" size={15} /> Duplicate</button>
-        <button className="ghost-btn danger" onClick={() => actions.remove(row.id)}>Delete</button>
+        <button className="ghost-btn" onClick={() => setEditing(v => !v)}><Icon name="pencil" size={15} /> Edit</button>
+        <button className="ghost-btn" onClick={() => { actions.duplicate(row.id); toast.success('Shift duplicated', 'copy') }}><Icon name="copy" size={15} /> Duplicate</button>
+        <button className="ghost-btn danger" onClick={() => { actions.remove(row.id); toast.toast('Shift deleted', { tone: 'danger', icon: 'trash' }) }}>Delete</button>
       </div>
     </div>
   )

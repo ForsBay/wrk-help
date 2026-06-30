@@ -16,13 +16,17 @@ import dynamic from 'next/dynamic'
 import { usePlatform } from '@/lib/use-platform'
 import { useShifts } from './features/shifts/useShifts'
 import { ViewId } from './nav'
+import { ToastProvider } from './ui/Toast'
+import { MobileSkeleton } from './ui/Skeleton'
 
 function Skeleton() {
   return <div style={{ minHeight: '100dvh', background: 'var(--bg, #0a0a0b)' }} />
 }
 
+// The mobile chunk shows a branded skeleton while it streams in (no blank flash);
+// desktop keeps the neutral fill since its grid paints instantly once mounted.
 const DesktopShell = dynamic(() => import('./shell/DesktopShell'), { ssr: false, loading: Skeleton })
-const MobileShell  = dynamic(() => import('./shell/MobileShell'),  { ssr: false, loading: Skeleton })
+const MobileShell  = dynamic(() => import('./shell/MobileShell'),  { ssr: false, loading: () => <MobileSkeleton /> })
 
 export default function AppShell() {
   const platform = usePlatform()
@@ -36,5 +40,9 @@ export default function AppShell() {
   if (!mounted) return <Skeleton /> // wait until the platform is known (no SSR flash)
 
   const Shell = platform.isDesktop ? DesktopShell : MobileShell
-  return <Shell active={active} onSelect={setActive} shifts={shifts} />
+  return (
+    <ToastProvider>
+      <Shell active={active} onSelect={setActive} shifts={shifts} />
+    </ToastProvider>
+  )
 }

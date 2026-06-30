@@ -6,6 +6,7 @@
 // and modifier-click multi-select. Transient drag-over state is local.
 import { memo, useState, DragEvent, MouseEvent } from 'react'
 import type { DayCellData } from './useCalendarMonth'
+import { categoryOf } from '../shifts/categories'
 
 export interface DayCellHandlers {
   onSelect: (id: string, e: MouseEvent) => void
@@ -31,19 +32,27 @@ function DayCellBase({ cell, selected, h }: { cell: DayCellData; selected: boole
         {cell.isToday && <span className="cal-today-dot" />}
       </div>
 
-      {s && (
-        <button
-          className={`cal-chip${selected ? ' on' : ''}${s.planned ? ' plan' : ''}`}
-          draggable
-          onDragStart={(e) => e.dataTransfer.setData('text/shift', s.id)}
-          onClick={(e) => { e.stopPropagation(); h.onSelect(s.id, e) }}
-          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); h.onContext(s.id, e.clientX, e.clientY) }}
-          title={`${s.f.range} · ${s.f.earnings}`}
-        >
-          <span className="cal-chip-h">{s.f.hours}{s.overtime ? ` +${s.f.overtime.replace('+', '')}` : ''}</span>
-          <span className="cal-chip-e">{s.f.earnings}</span>
-        </button>
-      )}
+      {s && (() => {
+        const cat = categoryOf(s.type)
+        return (
+          <button
+            className={`cal-chip${selected ? ' on' : ''}${s.planned ? ' plan' : ''}`}
+            draggable
+            style={{ ['--cat' as any]: cat.color, ['--cat-soft' as any]: cat.soft, ['--cat-line' as any]: cat.line }}
+            onDragStart={(e) => e.dataTransfer.setData('text/shift', s.id)}
+            onClick={(e) => { e.stopPropagation(); h.onSelect(s.id, e) }}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); h.onContext(s.id, e.clientX, e.clientY) }}
+            title={`${cat.label} · ${s.f.range} · ${s.f.earnings}${s.workplace ? ` · ${s.workplace}` : ''}`}
+          >
+            <span className="cal-chip-top">
+              <span className="cal-chip-h">{s.f.hours}{s.overtime ? ` +${s.f.overtime.replace('+', '')}` : ''}</span>
+              {s.gcalSynced && <span className="cal-chip-sync" />}
+            </span>
+            <span className="cal-chip-e">{s.f.earnings}</span>
+            {s.workplace && <span className="cal-chip-wp">{s.workplace}</span>}
+          </button>
+        )
+      })()}
     </div>
   )
 }
