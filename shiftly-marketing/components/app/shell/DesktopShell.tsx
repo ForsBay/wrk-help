@@ -19,9 +19,14 @@ import { CalendarGrid } from '../features/calendar/CalendarGrid'
 import { CalendarToolbar, Density, CalView } from '../features/calendar/CalendarToolbar'
 import ShiftsDesktop from '../features/shifts/ShiftsDesktop'
 import { DashboardView } from '../features/dashboard/DashboardView'
+import { StatsDesktop } from '../features/summary/StatsDesktop'
+import { ExportView } from '../features/export/ExportView'
+import { ProfileView } from '../features/profile/ProfileView'
+import { MobileIntegrations as IntegrationsView } from '../features/integrations/MobileIntegrations'
+import { MobileSettings as SettingsView } from '../features/settings/MobileSettings'
 import { ContextPanel } from '../features/inspector/ContextPanel'
 import { SummaryStats } from '../features/summary/SummaryStats'
-import { EmptyState } from '../ui/EmptyState'
+import { DeskPage } from '../ui/DeskPage'
 import { ShiftSheet, type SheetMode } from '../features/shifts/ShiftSheet'
 import { useDesktopShortcuts } from '../hooks/useDesktopShortcuts'
 import type { Command } from '../CommandPalette'
@@ -93,12 +98,22 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
             </div>
           </>
         ) : (
-          <div className="dplaceholder">
-            <EmptyState
-              icon={RAIL_ITEMS.find(i => i.id === active)?.icon ?? 'grid'}
-              title={`${RAIL_ITEMS.find(i => i.id === active)?.label ?? 'Section'} coming soon`}
-              body="This workspace is under construction. Your calendar and shifts are fully live."
-            />
+          <div className="dworkspace-body">
+            {active === 'stats' && (
+              <DeskPage title="Statistics" subtitle="This month at a glance"><StatsDesktop ctx={shifts} /></DeskPage>
+            )}
+            {active === 'integrations' && (
+              <DeskPage title="Integrations" subtitle="Keep your calendars in sync" width="narrow"><IntegrationsView ctx={shifts} /></DeskPage>
+            )}
+            {active === 'export' && (
+              <DeskPage title="Export" subtitle="Download your shifts" width="narrow"><ExportView ctx={shifts} /></DeskPage>
+            )}
+            {active === 'settings' && (
+              <DeskPage title="Settings" subtitle="Preferences & account" width="narrow"><SettingsView ctx={shifts} /></DeskPage>
+            )}
+            {active === 'profile' && (
+              <DeskPage title="Profile" subtitle="Account & lifetime totals" width="narrow"><ProfileView ctx={shifts} onNav={onSelect} /></DeskPage>
+            )}
           </div>
         )}
       </main>
