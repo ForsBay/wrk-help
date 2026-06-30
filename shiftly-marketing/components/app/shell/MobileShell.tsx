@@ -20,10 +20,13 @@ import { ShiftSheet, type SheetMode } from '../features/shifts/ShiftSheet'
 import { Icon } from '../ui/Icon'
 import { Logo } from '../ui/Logo'
 import { NAV_ITEMS } from '../nav'
+import { useT } from '@/lib/appI18n'
 import type { ShellProps } from './types'
 
 export default function MobileShell({ active, onSelect, shifts }: ShellProps) {
-  const title = NAV_ITEMS.find(n => n.id === active)?.label ?? ''
+  const t = useT()
+  const navItem = NAV_ITEMS.find(n => n.id === active)
+  const title = navItem ? t(navItem.i18nKey as any) : ''
   const [sheet, setSheet] = useState<SheetMode>(null)
 
   const selectedRow = shifts.state.selectedId ? shifts.state.byId[shifts.state.selectedId] ?? null : null

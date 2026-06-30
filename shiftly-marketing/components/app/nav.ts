@@ -14,6 +14,8 @@ export type ViewId =
 export interface NavItem {
   id: ViewId
   label: string
+  /** i18n key (lib/appI18n) for the translated label; falls back to `label`. */
+  i18nKey: string
   icon: IconName
   /** Desktop-only keyboard shortcut (ignored on mobile). */
   hotkey?: string
@@ -21,19 +23,19 @@ export interface NavItem {
 
 // MOBILE bottom nav — the 4 core destinations only (unchanged).
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'calendar',     label: 'Shifts',       icon: 'calendar', hotkey: '1' },
-  { id: 'stats',        label: 'Statistics',   icon: 'chart',    hotkey: '2' },
-  { id: 'integrations', label: 'Integrations', icon: 'plug',     hotkey: '3' },
-  { id: 'settings',     label: 'Settings',     icon: 'gear',     hotkey: '4' },
+  { id: 'calendar',     label: 'Shifts',       i18nKey: 'shifts',       icon: 'calendar', hotkey: '1' },
+  { id: 'stats',        label: 'Statistics',   i18nKey: 'statistics',   icon: 'chart',    hotkey: '2' },
+  { id: 'integrations', label: 'Integrations', i18nKey: 'integrations', icon: 'plug',     hotkey: '3' },
+  { id: 'settings',     label: 'Settings',     i18nKey: 'settings',     icon: 'gear',     hotkey: '4' },
 ]
 
 // DESKTOP rail — the full set; Profile is pinned to the bottom by the Rail.
 export const RAIL_ITEMS: NavItem[] = [
-  { id: 'dashboard',    label: 'Dashboard',    icon: 'grid',     hotkey: '1' },
-  { id: 'calendar',     label: 'Calendar',     icon: 'calendar', hotkey: '2' },
-  { id: 'stats',        label: 'Statistics',   icon: 'chart',    hotkey: '3' },
-  { id: 'integrations', label: 'Integrations', icon: 'plug',     hotkey: '4' },
-  { id: 'export',       label: 'Export',       icon: 'download', hotkey: '5' },
-  { id: 'settings',     label: 'Settings',     icon: 'gear',     hotkey: '6' },
+  { id: 'dashboard',    label: 'Dashboard',    i18nKey: 'dashboard',    icon: 'grid',     hotkey: '1' },
+  { id: 'calendar',     label: 'Calendar',     i18nKey: 'calendar',     icon: 'calendar', hotkey: '2' },
+  { id: 'stats',        label: 'Statistics',   i18nKey: 'statistics',   icon: 'chart',    hotkey: '3' },
+  { id: 'integrations', label: 'Integrations', i18nKey: 'integrations', icon: 'plug',     hotkey: '4' },
+  { id: 'export',       label: 'Export',       i18nKey: 'export',       icon: 'download', hotkey: '5' },
+  { id: 'settings',     label: 'Settings',     i18nKey: 'settings',     icon: 'gear',     hotkey: '6' },
 ]
-export const RAIL_PROFILE: NavItem = { id: 'profile', label: 'Profile', icon: 'user' }
+export const RAIL_PROFILE: NavItem = { id: 'profile', label: 'Profile', i18nKey: 'profile', icon: 'user' }

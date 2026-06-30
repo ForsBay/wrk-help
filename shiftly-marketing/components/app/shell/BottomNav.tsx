@@ -5,8 +5,10 @@
 // animated active indicator, no hover, no hotkeys. Respects the bottom safe-area.
 import { NAV_ITEMS, ViewId } from '../nav'
 import { Icon } from '../ui/Icon'
+import { useT } from '@/lib/appI18n'
 
 export function BottomNav({ active, onSelect }: { active: ViewId; onSelect: (v: ViewId) => void }) {
+  const t = useT()
   return (
     <nav className="m-nav">
       {NAV_ITEMS.map(item => {
@@ -19,7 +21,7 @@ export function BottomNav({ active, onSelect }: { active: ViewId; onSelect: (v: 
             className={`m-nav-item${on ? ' on' : ''}`}
           >
             <span className="m-nav-ic"><Icon name={item.icon} size={22} /></span>
-            <span className="m-nav-label">{item.label}</span>
+            <span className="m-nav-label">{t(item.i18nKey as any)}</span>
           </button>
         )
       })}

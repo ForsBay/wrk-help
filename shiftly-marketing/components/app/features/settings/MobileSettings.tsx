@@ -1,44 +1,48 @@
 'use client'
 
-// MOBILE Settings view. Grouped rows in the shared card language — toggles,
-// value rows and a profile header. Demo-local state (no persistence wired); it
-// exists to give the brand a complete, consistent settings surface on mobile and
-// to exercise the switch/row components used elsewhere.
+// Settings view (shared desktop + mobile). Account sign-in (cross-device sync),
+// real preferences, and — now wired — Currency, Language and Hourly rate that
+// actually drive the app (earnings format, UI language). Grouped rows in the
+// shared card language.
 import { useState } from 'react'
 import type { ShiftsContext } from '../shifts/useShifts'
+import { useAppSettings, CURRENCIES, LANGS, type Lang } from '@/lib/appSettings'
+import { useT } from '@/lib/appI18n'
+import { AuthCard } from '../account/AuthCard'
 import { Icon, type IconName } from '../../ui/Icon'
 
 export function MobileSettings({ ctx }: { ctx: ShiftsContext }) {
+  const t = useT()
+  const settings = useAppSettings()
   const [dark, setDark] = useState(true)
   const [notify, setNotify] = useState(true)
   const [autoSync, setAutoSync] = useState(true)
 
   return (
     <div className="m-stack">
-      {/* profile header */}
-      <div className="profile-card">
-        <span className="profile-avatar"><Icon name="user" size={24} /></span>
-        <div>
-          <div className="profile-name">Alex Worker</div>
-          <div className="profile-mail">work@gmail.com</div>
-        </div>
-      </div>
+      <AuthCard />
 
-      <Group title="Preferences">
-        <ToggleRow icon="moon" label="Dark theme" on={dark} onToggle={() => setDark(v => !v)} />
-        <ToggleRow icon="bell" label="Shift reminders" on={notify} onToggle={() => setNotify(v => !v)} />
-        <ToggleRow icon="sync" label="Auto-sync calendar" on={autoSync} onToggle={() => setAutoSync(v => !v)} />
+      <Group title={t('preferences')}>
+        <ToggleRow icon="moon" label={t('darkTheme')} on={dark} onToggle={() => setDark(v => !v)} />
+        <ToggleRow icon="bell" label={t('shiftReminders')} on={notify} onToggle={() => setNotify(v => !v)} />
+        <ToggleRow icon="sync" label={t('autoSync')} on={autoSync} onToggle={() => setAutoSync(v => !v)} />
+        <SelectRow icon="sparkle" label={t('language')} value={settings.lang}
+          options={LANGS.map(l => ({ value: l.code, label: l.label }))}
+          onChange={v => settings.setLang(v as Lang)} />
       </Group>
 
-      <Group title="Pay">
-        <ValueRow icon="coin" label="Hourly rate" value={`${ctx.meta.rate} ${ctx.meta.currency}`} />
-        <ValueRow icon="coin" label="Currency" value="PLN (zł)" />
-        <ValueRow icon="calendar" label="Week starts on" value="Monday" />
+      <Group title={t('pay')}>
+        <InputRow icon="coin" label={t('hourlyRate')} value={String(settings.rate)} suffix={settings.symbol}
+          onChange={v => settings.setRate(Number(v) || settings.rate)} />
+        <SelectRow icon="coin" label={t('currency')} value={settings.currency}
+          options={CURRENCIES.map(c => ({ value: c.code, label: `${c.name} (${c.symbol})` }))}
+          onChange={settings.setCurrency} />
+        <ValueRow icon="calendar" label={t('weekStartsOn')} value={t('monday')} />
       </Group>
 
-      <Group title="About">
-        <ValueRow icon="sparkle" label="Version" value="1.8.1" />
-        <ValueRow icon="gear" label="Performance mode" value="Auto" />
+      <Group title={t('about')}>
+        <ValueRow icon="sparkle" label={t('version')} value="1.8.1" />
+        <ValueRow icon="gear" label={t('performanceMode')} value={t('auto')} />
       </Group>
     </div>
   )
@@ -69,7 +73,36 @@ function ValueRow({ icon, label, value }: { icon: IconName; label: string; value
       <span className="set-ic"><Icon name={icon} size={18} /></span>
       <span className="set-label">{label}</span>
       <span className="set-val">{value}</span>
-      <Icon name="chevron" size={15} style={{ color: 'var(--text-3)' }} />
     </div>
+  )
+}
+
+function SelectRow({ icon, label, value, options, onChange }: {
+  icon: IconName; label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void
+}) {
+  return (
+    <label className="set-row">
+      <span className="set-ic"><Icon name={icon} size={18} /></span>
+      <span className="set-label">{label}</span>
+      <select className="set-select" value={value} onChange={e => onChange(e.target.value)}>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </label>
+  )
+}
+
+function InputRow({ icon, label, value, suffix, onChange }: {
+  icon: IconName; label: string; value: string; suffix?: string; onChange: (v: string) => void
+}) {
+  return (
+    <label className="set-row">
+      <span className="set-ic"><Icon name={icon} size={18} /></span>
+      <span className="set-label">{label}</span>
+      <span className="set-input-wrap">
+        <input className="set-input" inputMode="decimal" defaultValue={value}
+          onBlur={e => onChange(e.target.value.replace(/[^0-9.]/g, ''))} />
+        {suffix && <span className="set-input-suffix">{suffix}</span>}
+      </span>
+    </label>
   )
 }

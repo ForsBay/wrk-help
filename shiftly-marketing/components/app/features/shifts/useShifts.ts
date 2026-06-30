@@ -16,7 +16,10 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import type { ShiftType } from './categories'
 import { loadShifts, saveShifts, subscribeShifts } from '../../../../lib/shiftStore'
+import { loadCloud, saveCloud, subscribeCloud } from '../../../../lib/cloudStore'
 import { pushShift, removeShift } from '../../../../lib/gcalSync'
+import { useAuth } from '../../../../lib/auth'
+import { useAppSettings } from '../../../../lib/appSettings'
 
 export interface Shift {
   id: string
@@ -64,9 +67,6 @@ export interface ShiftsActions {
 export interface ShiftsMeta { rate: number; currency: string }
 export interface ShiftsContext { state: ShiftsState; actions: ShiftsActions; meta: ShiftsMeta }
 
-const RATE = 31.4
-const CUR = 'zł'
-
 const SEED: Shift[] = [
   { id: 'd1', date: '2026-06-22', weekday: 'Mon', from: '09:00', to: '17:30', hours: 8.5, overtime: 0,   planned: false, breakMin: 30, workplace: 'Warehouse A', notes: 'Inventory day', gcalSynced: true,  type: 'regular' },
   { id: 'd2', date: '2026-06-23', weekday: 'Tue', from: '09:00', to: '18:00', hours: 9,   overtime: 0.5, planned: false, breakMin: 30, workplace: 'Warehouse A', gcalSynced: true,  type: 'overtime' },
@@ -77,7 +77,6 @@ const SEED: Shift[] = [
 ]
 
 const num = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(1))
-const money = (n: number) => `${Math.round(n)} ${CUR}`
 const weekdayOf = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' })
 const addDays = (iso: string, n: number) => {
   const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n)
@@ -85,21 +84,57 @@ const addDays = (iso: string, n: number) => {
 }
 
 export function useShifts(): ShiftsContext {
-  // REAL data: hydrate from the persistent store (seeded once), persist on every
-  // change, and live-update when another shell/tab mutates the same store.
+  const { user } = useAuth()
+  const { rate: defRate, symbol } = useAppSettings()
+  const uid = user?.uid ?? null
+
+  // REAL data: hydrate from the active store (cloud when signed in, else local),
+  // persist on every change, and live-update from other devices / tabs.
   const [shifts, setShifts] = useState<Shift[]>(() => loadShifts(SEED))
   const [selectedIds, setSelectedIds] = useState<string[]>([])
 
   // A ref mirror lets the actions read the current list synchronously (to compute
   // the affected row for Google Calendar sync) without stale-closure bugs.
   const shiftsRef = useRef(shifts)
-  useEffect(() => { shiftsRef.current = shifts; saveShifts(shifts) }, [shifts])
-  useEffect(() => subscribeShifts(setShifts), [])
+  useEffect(() => { shiftsRef.current = shifts }, [shifts])
+
+  // `lastSynced` holds the JSON we last read from / wrote to the cloud, so a value
+  // that just arrived FROM the cloud is never written straight back (no feedback loop).
+  const lastSynced = useRef<string>('')
+
+  // Source of truth: switch between local storage and Firestore on auth change.
+  useEffect(() => {
+    if (!uid) {                                   // signed out → local store
+      setShifts(loadShifts(SEED))
+      return subscribeShifts(setShifts)
+    }
+    let cancelled = false                          // signed in → cloud store
+    loadCloud(uid).then(cloud => {
+      if (cancelled) return
+      if (cloud && cloud.length) { lastSynced.current = JSON.stringify(cloud); setShifts(cloud) }
+      else { const local = shiftsRef.current; lastSynced.current = JSON.stringify(local); saveCloud(uid, local) }
+    })
+    const unsub = subscribeCloud(uid, remote => {
+      lastSynced.current = JSON.stringify(remote); setShifts(remote)
+    })
+    return () => { cancelled = true; unsub() }
+  }, [uid])
+
+  // Persist on change to whichever store is active (cloud writes are debounced).
+  const saveTimer = useRef<ReturnType<typeof setTimeout>>()
+  useEffect(() => {
+    if (!uid) { saveShifts(shifts); return }
+    const json = JSON.stringify(shifts)
+    if (json === lastSynced.current) return        // came from cloud — don't echo back
+    clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => { saveCloud(uid, shifts); lastSynced.current = json }, 600)
+  }, [shifts, uid])
 
   // Derived during render (rerender-derived-state-no-effect): rows + totals + index.
   const { rows, byId, totals } = useMemo(() => {
+    const money = (n: number) => `${Math.round(n)} ${symbol}`
     const rows: ShiftRow[] = shifts.map(s => {
-      const rate = s.rate && s.rate > 0 ? s.rate : RATE
+      const rate = s.rate && s.rate > 0 ? s.rate : defRate
       const earnings = s.hours * rate + s.overtime * rate * 0.5
       const d = new Date(s.date + 'T00:00:00')
       return {
@@ -126,7 +161,7 @@ export function useShifts(): ShiftsContext {
         f: { hours: `${num(hours)}h`, overtime: `${num(overtime)}h`, earnings: money(earnings) },
       },
     }
-  }, [shifts])
+  }, [shifts, defRate, symbol])
 
   // Stable actions (rerender-functional-setstate).
   const select = useCallback((id: string | null) => setSelectedIds(id ? [id] : []), [])
@@ -180,6 +215,6 @@ export function useShifts(): ShiftsContext {
   return {
     state: { rows, byId, totals, selectedId, selectedIds },
     actions: { select, toggleSelect, selectMany, clearSelection, remove, removeMany, duplicate, move, update, add },
-    meta: { rate: RATE, currency: CUR },
+    meta: { rate: defRate, currency: symbol },
   }
 }

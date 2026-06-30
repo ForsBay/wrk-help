@@ -27,6 +27,7 @@ import { MobileSettings as SettingsView } from '../features/settings/MobileSetti
 import { ContextPanel } from '../features/inspector/ContextPanel'
 import { SummaryStats } from '../features/summary/SummaryStats'
 import { DeskPage } from '../ui/DeskPage'
+import { useT } from '@/lib/appI18n'
 import { ShiftSheet, type SheetMode } from '../features/shifts/ShiftSheet'
 import { useDesktopShortcuts } from '../hooks/useDesktopShortcuts'
 import type { Command } from '../CommandPalette'
@@ -34,6 +35,7 @@ import type { Command } from '../CommandPalette'
 const CommandPalette = dynamic(() => import('../CommandPalette'), { ssr: false })
 
 export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
+  const t = useT()
   const cal = useCalendarMonth(shifts)
   const [collapsed, setCollapsed] = useState(false)
   const [density, setDensity] = useState<Density>('comfortable')
@@ -100,19 +102,19 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
         ) : (
           <div className="dworkspace-body">
             {active === 'stats' && (
-              <DeskPage title="Statistics" subtitle="This month at a glance"><StatsDesktop ctx={shifts} /></DeskPage>
+              <DeskPage title={t('statistics')} subtitle={t('thisMonth')}><StatsDesktop ctx={shifts} /></DeskPage>
             )}
             {active === 'integrations' && (
-              <DeskPage title="Integrations" subtitle="Keep your calendars in sync" width="narrow"><IntegrationsView ctx={shifts} /></DeskPage>
+              <DeskPage title={t('integrations')} width="narrow"><IntegrationsView ctx={shifts} /></DeskPage>
             )}
             {active === 'export' && (
-              <DeskPage title="Export" subtitle="Download your shifts" width="narrow"><ExportView ctx={shifts} /></DeskPage>
+              <DeskPage title={t('export')} width="narrow"><ExportView ctx={shifts} /></DeskPage>
             )}
             {active === 'settings' && (
-              <DeskPage title="Settings" subtitle="Preferences & account" width="narrow"><SettingsView ctx={shifts} /></DeskPage>
+              <DeskPage title={t('settings')} subtitle={t('preferences')} width="narrow"><SettingsView ctx={shifts} /></DeskPage>
             )}
             {active === 'profile' && (
-              <DeskPage title="Profile" subtitle="Account & lifetime totals" width="narrow"><ProfileView ctx={shifts} onNav={onSelect} /></DeskPage>
+              <DeskPage title={t('profile')} subtitle={t('account')} width="narrow"><ProfileView ctx={shifts} onNav={onSelect} /></DeskPage>
             )}
           </div>
         )}

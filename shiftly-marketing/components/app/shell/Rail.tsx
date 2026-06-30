@@ -5,12 +5,15 @@
 import { RAIL_ITEMS, RAIL_PROFILE, ViewId } from '../nav'
 import { Icon } from '../ui/Icon'
 import { Logo } from '../ui/Logo'
+import { useT } from '@/lib/appI18n'
 
 export function Rail({ active, onSelect, collapsed, onToggle }: {
   active: ViewId; onSelect: (v: ViewId) => void; collapsed: boolean; onToggle: () => void
 }) {
-  const Item = ({ id, label, icon, hotkey }: typeof RAIL_ITEMS[number]) => {
+  const t = useT()
+  const Item = ({ id, i18nKey, icon, hotkey }: typeof RAIL_ITEMS[number]) => {
     const on = id === active
+    const label = t(i18nKey as any)
     return (
       <button key={id} onClick={() => onSelect(id)} className={`rail-item${on ? ' on' : ''}`} title={collapsed ? label : undefined}>
         <Icon name={icon} size={19} style={{ color: on ? 'var(--accent)' : 'currentColor', flexShrink: 0 }} />
