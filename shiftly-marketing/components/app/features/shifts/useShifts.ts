@@ -13,8 +13,10 @@
 // the original subset unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import type { ShiftType } from './categories'
+import { loadShifts, saveShifts, subscribeShifts } from '../../../../lib/shiftStore'
+import { pushShift, removeShift } from '../../../../lib/gcalSync'
 
 export interface Shift {
   id: string
@@ -31,6 +33,7 @@ export interface Shift {
   notes?: string
   gcalSynced?: boolean
   type?: ShiftType    // colour category (defaults to `regular` everywhere)
+  rate?: number       // per-shift hourly rate override (falls back to meta.rate)
 }
 
 export interface ShiftRow extends Shift {
@@ -82,13 +85,22 @@ const addDays = (iso: string, n: number) => {
 }
 
 export function useShifts(): ShiftsContext {
-  const [shifts, setShifts] = useState<Shift[]>(SEED)
+  // REAL data: hydrate from the persistent store (seeded once), persist on every
+  // change, and live-update when another shell/tab mutates the same store.
+  const [shifts, setShifts] = useState<Shift[]>(() => loadShifts(SEED))
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+
+  // A ref mirror lets the actions read the current list synchronously (to compute
+  // the affected row for Google Calendar sync) without stale-closure bugs.
+  const shiftsRef = useRef(shifts)
+  useEffect(() => { shiftsRef.current = shifts; saveShifts(shifts) }, [shifts])
+  useEffect(() => subscribeShifts(setShifts), [])
 
   // Derived during render (rerender-derived-state-no-effect): rows + totals + index.
   const { rows, byId, totals } = useMemo(() => {
     const rows: ShiftRow[] = shifts.map(s => {
-      const earnings = s.hours * RATE + s.overtime * RATE * 0.5
+      const rate = s.rate && s.rate > 0 ? s.rate : RATE
+      const earnings = s.hours * rate + s.overtime * rate * 0.5
       const d = new Date(s.date + 'T00:00:00')
       return {
         ...s, earnings,
@@ -123,31 +135,44 @@ export function useShifts(): ShiftsContext {
   const selectMany = useCallback((ids: string[]) => setSelectedIds(ids), [])
   const clearSelection = useCallback(() => setSelectedIds([]), [])
   const remove = useCallback((id: string) => {
-    setShifts(prev => prev.filter(s => s.id !== id))
-    setSelectedIds(prev => prev.filter(x => x !== id))
+    const prev = shiftsRef.current.find(s => s.id === id)
+    setShifts(list => list.filter(s => s.id !== id))
+    setSelectedIds(ids => ids.filter(x => x !== id))
+    if (prev?.gcalSynced) removeShift(prev)            // delete the Google event
   }, [])
   const removeMany = useCallback((ids: string[]) => {
     const set = new Set(ids)
-    setShifts(prev => prev.filter(s => !set.has(s.id)))
+    const removed = shiftsRef.current.filter(s => set.has(s.id))
+    setShifts(list => list.filter(s => !set.has(s.id)))
     setSelectedIds([])
+    removed.forEach(s => { if (s.gcalSynced) removeShift(s) })
   }, [])
   const duplicate = useCallback((id: string) => {
-    setShifts(prev => {
-      const s = prev.find(x => x.id === id); if (!s) return prev
-      const date = addDays(s.date, 1)
-      return [...prev, { ...s, id: `s${Date.now()}`, date, weekday: weekdayOf(date), planned: true, gcalSynced: false }]
-    })
+    const s = shiftsRef.current.find(x => x.id === id); if (!s) return
+    const date = addDays(s.date, 1)
+    const copy: Shift = { ...s, id: `s${Date.now()}`, date, weekday: weekdayOf(date), planned: true, gcalSynced: false }
+    setShifts(list => [...list, copy])
+    setSelectedIds([copy.id])
   }, [])
   const move = useCallback((id: string, newDate: string) => {
-    setShifts(prev => prev.map(s => s.id === id ? { ...s, date: newDate, weekday: weekdayOf(newDate) } : s))
+    const prev = shiftsRef.current.find(s => s.id === id)
+    const next = prev ? { ...prev, date: newDate, weekday: weekdayOf(newDate) } : null
+    setShifts(list => list.map(s => s.id === id ? { ...s, date: newDate, weekday: weekdayOf(newDate) } : s))
+    if (next?.gcalSynced) { if (prev) removeShift(prev); pushShift(next) } // move = delete old day + create new
   }, [])
   const update = useCallback((id: string, patch: Partial<Shift>) => {
-    setShifts(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s))
+    const prev = shiftsRef.current.find(s => s.id === id); if (!prev) return
+    const next = { ...prev, ...patch }
+    setShifts(list => list.map(s => s.id === id ? next : s))
+    if (next.gcalSynced) { if (prev.date !== next.date && prev.gcalSynced) removeShift(prev); pushShift(next) }
+    else if (prev.gcalSynced) removeShift(prev)        // sync turned off → remove event
   }, [])
   const add = useCallback((draft: Omit<Shift, 'id' | 'weekday'>) => {
     const id = `s${Date.now()}`
-    setShifts(prev => [...prev, { ...draft, id, weekday: weekdayOf(draft.date) }])
+    const ns: Shift = { ...draft, id, weekday: weekdayOf(draft.date) }
+    setShifts(list => [...list, ns])
     setSelectedIds([id])
+    if (ns.gcalSynced) pushShift(ns)                   // create the Google event
   }, [])
 
   const selectedId = selectedIds.length ? selectedIds[selectedIds.length - 1] : null

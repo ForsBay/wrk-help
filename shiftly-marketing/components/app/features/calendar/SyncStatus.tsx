@@ -1,43 +1,57 @@
 'use client'
 
-// Desktop toolbar sync cluster — a live "calendar synced" pill with a relative
-// last-sync time, a stack of connected-account avatars, and a working refresh.
-// Reads as a premium native status bar; demo-local state only (no Platform/Service
-// changes). Mirrors the mobile Integrations language so the brand is consistent.
-import { useState } from 'react'
+// Desktop toolbar sync cluster — wired to the REAL providers layer. Shows the
+// connected Google account (or a Connect action), and a working refresh that
+// pushes the current shifts to every connected calendar via the SyncEngine.
+// Honest: when nothing is connected it says so and offers Connect; when no OAuth
+// client id is configured, connect() surfaces the provider's real error.
+import { useEffect, useState } from 'react'
 import { Icon } from '../../ui/Icon'
+import { useToast } from '../../ui/Toast'
+import { connectGoogle, googleAccountEmail, syncMany } from '../../../../lib/gcalSync'
+import type { ShiftRow } from '../shifts/useShifts'
 
-const ACCOUNTS = [
-  { id: 'g', label: 'work@gmail.com', color: '#34c98a' },
-  { id: 'p', label: 'personal@gmail.com', color: '#8b8bf5' },
-]
-const rel = (m: number) => m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`
+export function SyncStatus({ rows }: { rows: ShiftRow[] }) {
+  const [email, setEmail] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const toast = useToast()
 
-export function SyncStatus() {
-  const [mins, setMins] = useState(2)
-  const [syncing, setSyncing] = useState(false)
+  useEffect(() => { googleAccountEmail().then(setEmail).catch(() => {}) }, [])
 
-  const sync = () => {
-    if (syncing) return
-    setSyncing(true)
-    setTimeout(() => { setSyncing(false); setMins(0) }, 900)
+  const connect = async () => {
+    setBusy(true)
+    try {
+      const acc = await connectGoogle()
+      setEmail((acc && acc.email) || await googleAccountEmail() || 'Google')
+      toast.success('Google Calendar connected')
+    } catch (err: any) {
+      toast.toast(err?.message || 'Could not connect Google', { tone: 'danger' })
+    } finally { setBusy(false) }
+  }
+
+  const sync = async () => {
+    setBusy(true)
+    try { await syncMany(rows); toast.success('Calendar synced', 'sync') }
+    finally { setBusy(false) }
+  }
+
+  if (!email) {
+    return (
+      <button className="ghost-btn" onClick={connect} disabled={busy} title="Connect Google Calendar">
+        <Icon name="sync" size={15} className={busy ? 'spin' : undefined} />
+        {busy ? 'Connecting…' : 'Connect Google'}
+      </button>
+    )
   }
 
   return (
-    <div className="syncbar" title="Connected calendars">
+    <div className="syncbar" title={`Connected: ${email}`}>
       <span className="acct-stack">
-        {ACCOUNTS.map(a => (
-          <span key={a.id} className="acct-avatar" style={{ background: a.color }} title={a.label}>
-            {a.label[0].toUpperCase()}
-          </span>
-        ))}
+        <span className="acct-avatar" style={{ background: '#34c98a' }}>{email[0].toUpperCase()}</span>
       </span>
-      <span className="sync-pill">
-        <span className={`sync-dot${syncing ? '' : ' on'}`} />
-        {syncing ? 'Syncing…' : `Synced ${rel(mins)}`}
-      </span>
-      <button className="icon-btn sync-refresh" onClick={sync} title="Sync now" aria-label="Sync now">
-        <Icon name="sync" size={16} className={syncing ? 'spin' : undefined} />
+      <span className="sync-pill"><span className="sync-dot on" /> Synced</span>
+      <button className="icon-btn sync-refresh" onClick={sync} disabled={busy} title="Sync now" aria-label="Sync now">
+        <Icon name="sync" size={16} className={busy ? 'spin' : undefined} />
       </button>
     </div>
   )

@@ -4,15 +4,20 @@
 // over scrolling content); it is disabled on lite/mobile by existing CSS gates.
 import type { CalendarMonth } from './useCalendarMonth'
 import { SyncStatus } from './SyncStatus'
+import type { ShiftRow } from '../shifts/useShifts'
 
 export type Density = 'comfortable' | 'compact'
+export type CalView = 'month' | 'week' | 'agenda'
 
-export function CalendarToolbar({ cal, density, onDensity, onNew, onPalette }: {
+export function CalendarToolbar({ cal, density, onDensity, onNew, onPalette, rows, view, onView }: {
   cal: CalendarMonth
   density: Density
   onDensity: (d: Density) => void
   onNew: () => void
   onPalette: () => void
+  rows: ShiftRow[]
+  view: CalView
+  onView: (v: CalView) => void
 }) {
   return (
     <div className="cal-toolbar">
@@ -24,12 +29,12 @@ export function CalendarToolbar({ cal, density, onDensity, onNew, onPalette }: {
       </div>
 
       <div className="cal-tb-right">
-        <SyncStatus />
+        <SyncStatus rows={rows} />
         <span className="tb-sep" />
-        <div className="seg">
-          <button className="seg-on">Month</button>
-          <button className="seg-off" disabled>Week</button>
-          <button className="seg-off" disabled>Agenda</button>
+        <div className="seg" role="group" aria-label="Calendar view">
+          <button className={view === 'month' ? 'seg-on' : 'seg-off'} onClick={() => onView('month')}>Month</button>
+          <button className={view === 'week' ? 'seg-on' : 'seg-off'} onClick={() => onView('week')}>Week</button>
+          <button className={view === 'agenda' ? 'seg-on' : 'seg-off'} onClick={() => onView('agenda')}>Agenda</button>
         </div>
         <div className="seg" role="group" aria-label="Density">
           <button className={density === 'comfortable' ? 'seg-on' : 'seg-off'} onClick={() => onDensity('comfortable')} title="Comfortable">≡</button>

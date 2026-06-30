@@ -9,7 +9,7 @@ import { categoryOf } from '../shifts/categories'
 import { Icon } from '../../ui/Icon'
 import { useToast } from '../../ui/Toast'
 
-export function ShiftInspector({ row, actions }: { row: ShiftRow; actions: ShiftsContext['actions'] }) {
+export function ShiftInspector({ row, actions, onEdit }: { row: ShiftRow; actions: ShiftsContext['actions']; onEdit?: (id: string) => void }) {
   const [editing, setEditing] = useState(false)
   const cat = categoryOf(row.type)
   const toast = useToast()
@@ -57,7 +57,7 @@ export function ShiftInspector({ row, actions }: { row: ShiftRow; actions: Shift
       )}
 
       <div className="insp-actions">
-        <button className="ghost-btn" onClick={() => setEditing(v => !v)}><Icon name="pencil" size={15} /> Edit</button>
+        <button className="ghost-btn" onClick={() => onEdit ? onEdit(row.id) : setEditing(v => !v)}><Icon name="pencil" size={15} /> Edit</button>
         <button className="ghost-btn" onClick={() => { actions.duplicate(row.id); toast.success('Shift duplicated', 'copy') }}><Icon name="copy" size={15} /> Duplicate</button>
         <button className="ghost-btn danger" onClick={() => { actions.remove(row.id); toast.toast('Shift deleted', { tone: 'danger', icon: 'trash' }) }}>Delete</button>
       </div>

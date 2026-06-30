@@ -66,7 +66,7 @@ export default function MobileShell({ active, onSelect, shifts }: ShellProps) {
           </>
         )}
         {active === 'stats'        && <MobileStats ctx={shifts} />}
-        {active === 'integrations' && <MobileIntegrations />}
+        {active === 'integrations' && <MobileIntegrations ctx={shifts} />}
         {active === 'settings'     && <MobileSettings ctx={shifts} />}
       </main>
 

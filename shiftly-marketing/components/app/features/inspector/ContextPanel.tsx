@@ -12,7 +12,7 @@ import { Surface } from '../../ui/Surface'
 import { EmptyState } from '../../ui/EmptyState'
 import { categoryOf } from '../shifts/categories'
 
-export function ContextPanel({ ctx, cal }: { ctx: ShiftsContext; cal: CalendarMonth }) {
+export function ContextPanel({ ctx, cal, onEdit }: { ctx: ShiftsContext; cal: CalendarMonth; onEdit?: (id: string) => void }) {
   const { selectedIds, selectedId, byId } = ctx.state
 
   if (selectedIds.length > 1) {
@@ -29,7 +29,7 @@ export function ContextPanel({ ctx, cal }: { ctx: ShiftsContext; cal: CalendarMo
   }
 
   if (selectedId && byId[selectedId]) {
-    return <div className="ctxpanel"><ShiftInspector row={byId[selectedId]} actions={ctx.actions} /></div>
+    return <div className="ctxpanel"><ShiftInspector row={byId[selectedId]} actions={ctx.actions} onEdit={onEdit} /></div>
   }
 
   // Default — keep the space useful.

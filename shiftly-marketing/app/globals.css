@@ -312,6 +312,7 @@ input  { font-family: var(--font-manrope); }
 .cal-head-cell { text-align: left; padding: 0 8px; font-size: 11px; font-weight: 600; letter-spacing: .06em;
   text-transform: uppercase; color: var(--text-3, #71717a); }
 .cal-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: repeat(6, minmax(var(--cell-min), 1fr)); gap: 6px; }
+.cal-grid.cal-grid-week { grid-template-rows: minmax(0, 1fr); }
 .cal-cell { border: 1px solid var(--border, #27272a); border-radius: 10px; background: var(--surface, #131316);
   padding: 7px 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow: hidden; transition: background .12s; }
 .cal-out { opacity: .4; }
@@ -750,4 +751,15 @@ html[data-mobile] .cta-primary::after { display: none !important; }
   .up-card:hover { transform: translateY(-1px); background: var(--surface-2); }
   .m-card:hover { border-color: var(--border-2); }
   .conn-card:hover { border-color: var(--border-2); }
+}
+
+/* ── shared editor as a centered modal on desktop (same component, different shell) */
+@media (min-width: 1024px) {
+  .sheet-overlay { align-items: center; }
+  .sheet { max-width: 460px; max-height: 86dvh; border: 1px solid var(--border-2);
+    border-radius: 18px; padding: 10px 22px 22px;
+    transform: translateY(14px) scale(.985); box-shadow: 0 40px 90px -30px rgba(0,0,0,.8); }
+  .sheet.on { transform: none; }
+  .sheet-grabber { display: none; }
+  .sheet-head { padding-top: 12px; }
 }

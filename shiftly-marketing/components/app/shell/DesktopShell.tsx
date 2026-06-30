@@ -16,10 +16,12 @@ import { RAIL_ITEMS } from '../nav'
 import { Rail } from './Rail'
 import { useCalendarMonth } from '../features/calendar/useCalendarMonth'
 import { CalendarGrid } from '../features/calendar/CalendarGrid'
-import { CalendarToolbar, Density } from '../features/calendar/CalendarToolbar'
+import { CalendarToolbar, Density, CalView } from '../features/calendar/CalendarToolbar'
+import ShiftsDesktop from '../features/shifts/ShiftsDesktop'
 import { ContextPanel } from '../features/inspector/ContextPanel'
 import { SummaryStats } from '../features/summary/SummaryStats'
 import { EmptyState } from '../ui/EmptyState'
+import { ShiftSheet, type SheetMode } from '../features/shifts/ShiftSheet'
 import { useDesktopShortcuts } from '../hooks/useDesktopShortcuts'
 import type { Command } from '../CommandPalette'
 
@@ -29,10 +31,24 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
   const cal = useCalendarMonth(shifts)
   const [collapsed, setCollapsed] = useState(false)
   const [density, setDensity] = useState<Density>('comfortable')
+  const [view, setView] = useState<CalView>('month')
   const [palette, setPalette] = useState(false)
+  const [editor, setEditor] = useState<SheetMode>(null)   // the shared create/edit sheet
 
-  const newShift = () => { /* opens the editor in the real app; demo no-op */ }
+  // The 7 cells of the focused week (today's week, else first week with a shift).
+  const weekCells = useMemo(() => {
+    const cs = cal.cells
+    let idx = cs.findIndex(c => c.isToday && c.inMonth)
+    if (idx < 0) idx = cs.findIndex(c => c.inMonth && c.shift)
+    if (idx < 0) idx = cs.findIndex(c => c.inMonth)
+    const start = Math.max(0, Math.floor((idx < 0 ? 0 : idx) / 7) * 7)
+    return cs.slice(start, start + 7)
+  }, [cal.cells])
+
+  const newShift = () => setEditor('new')
+  const editShift = (id: string) => { shifts.actions.select(id); setEditor('edit') }
   const sel = shifts.state.selectedIds
+  const selectedRow = shifts.state.selectedId ? shifts.state.byId[shifts.state.selectedId] ?? null : null
 
   useDesktopShortcuts({
     openPalette: () => setPalette(true),
@@ -50,7 +66,8 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
     { id: 'prev', label: 'Previous month', hint: '←', run: cal.prev },
     { id: 'next', label: 'Next month', hint: '→', run: cal.next },
     { id: 'new', label: 'New shift', hint: 'N', run: newShift },
-  ], [onSelect, cal])
+    ...(selectedRow ? [{ id: 'edit', label: 'Edit selected shift', hint: 'E', run: () => editShift(selectedRow.id) }] : []),
+  ], [onSelect, cal, selectedRow])
 
   const isCalendar = active === 'calendar' || active === 'dashboard'
 
@@ -61,9 +78,11 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
       <main className="dworkspace">
         {isCalendar ? (
           <>
-            <CalendarToolbar cal={cal} density={density} onDensity={setDensity} onNew={newShift} onPalette={() => setPalette(true)} />
+            <CalendarToolbar cal={cal} density={density} onDensity={setDensity} onNew={newShift} onPalette={() => setPalette(true)} rows={shifts.state.rows} view={view} onView={setView} />
             <div className="dworkspace-body">
-              <CalendarGrid ctx={shifts} cal={cal} />
+              {view === 'agenda'
+                ? <ShiftsDesktop ctx={shifts} />
+                : <CalendarGrid ctx={shifts} cal={cal} cells={view === 'week' ? weekCells : undefined} variant={view === 'week' ? 'week' : 'month'} />}
             </div>
             <div className="dkpi">
               <SummaryStats totals={shifts.state.totals} />
@@ -81,10 +100,11 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
       </main>
 
       <aside className="dpanel">
-        <ContextPanel ctx={shifts} cal={cal} />
+        <ContextPanel ctx={shifts} cal={cal} onEdit={editShift} />
       </aside>
 
       <CommandPalette open={palette} onClose={() => setPalette(false)} commands={commands} />
+      <ShiftSheet mode={editor} row={editor === 'new' ? null : selectedRow} ctx={shifts} onClose={() => setEditor(null)} />
     </div>
   )
 }

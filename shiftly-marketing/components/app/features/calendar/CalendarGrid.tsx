@@ -8,12 +8,18 @@ import type { ShiftsContext } from '../shifts/useShifts'
 import type { CalendarMonth } from './useCalendarMonth'
 import { DayCell, DayCellHandlers } from './DayCell'
 
-export function CalendarGrid({ ctx, cal }: { ctx: ShiftsContext; cal: CalendarMonth }) {
+export function CalendarGrid({ ctx, cal, cells, variant = 'month' }: {
+  ctx: ShiftsContext
+  cal: CalendarMonth
+  cells?: import('./useCalendarMonth').DayCellData[]   // override (Week view)
+  variant?: 'month' | 'week'
+}) {
   const { selectedIds } = ctx.state
   const [menu, setMenu] = useState<{ x: number; y: number; id: string } | null>(null)
+  const view = cells ?? cal.cells
 
   // ordered shift ids as they appear in the grid — for shift-click range select
-  const order = useMemo(() => cal.cells.filter(c => c.shift).map(c => c.shift!.id), [cal.cells])
+  const order = useMemo(() => view.filter(c => c.shift).map(c => c.shift!.id), [view])
 
   const handlers: DayCellHandlers = {
     onSelect: useCallback((id: string, e: MouseEvent) => {
@@ -36,8 +42,8 @@ export function CalendarGrid({ ctx, cal }: { ctx: ShiftsContext; cal: CalendarMo
       <div className="cal-head">
         {cal.weekdays.map(w => <div key={w} className="cal-head-cell">{w}</div>)}
       </div>
-      <div className="cal-grid">
-        {cal.cells.map(c => (
+      <div className={`cal-grid${variant === 'week' ? ' cal-grid-week' : ''}`}>
+        {view.map(c => (
           <DayCell key={c.date} cell={c} selected={!!c.shift && sel.has(c.shift.id)} h={handlers} />
         ))}
       </div>
