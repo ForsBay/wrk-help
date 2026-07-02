@@ -54,7 +54,9 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
     return cs.slice(start, start + 7)
   }, [cal.cells])
 
-  const newShift = (date?: string) => { setEditorDate(date); setEditor('new') }
+  // Guard the arg: the toolbar/palette pass a click event (or nothing) → default to
+  // today; only a real ISO date string (a calendar-day click) presets that day.
+  const newShift = (date?: string) => { setEditorDate(typeof date === 'string' ? date : undefined); setEditor('new') }
   const editShift = (id: string) => { shifts.actions.select(id); setEditor('edit') }
   const sel = shifts.state.selectedIds
   const selectedRow = shifts.state.selectedId ? shifts.state.byId[shifts.state.selectedId] ?? null : null
@@ -70,13 +72,13 @@ export default function DesktopShell({ active, onSelect, shifts }: ShellProps) {
   })
 
   const commands: Command[] = useMemo(() => [
-    ...RAIL_ITEMS.map(i => ({ id: `nav-${i.id}`, label: `Go to ${i.label}`, hint: i.hotkey, run: () => onSelect(i.id) })),
-    { id: 'today', label: 'Go to today', hint: 'T', run: cal.goToday },
-    { id: 'prev', label: 'Previous month', hint: '←', run: cal.prev },
-    { id: 'next', label: 'Next month', hint: '→', run: cal.next },
-    { id: 'new', label: 'New shift', hint: 'N', run: newShift },
-    ...(selectedRow ? [{ id: 'edit', label: 'Edit selected shift', hint: 'E', run: () => editShift(selectedRow.id) }] : []),
-  ], [onSelect, cal, selectedRow])
+    ...RAIL_ITEMS.map(i => ({ id: `nav-${i.id}`, label: `${t('goTo')} ${t(i.i18nKey as any)}`, hint: i.hotkey, run: () => onSelect(i.id) })),
+    { id: 'today', label: t('goToday'), hint: 'T', run: cal.goToday },
+    { id: 'prev', label: t('prevMonth'), hint: '←', run: cal.prev },
+    { id: 'next', label: t('nextMonth'), hint: '→', run: cal.next },
+    { id: 'new', label: t('newShift'), hint: 'N', run: () => newShift() },
+    ...(selectedRow ? [{ id: 'edit', label: t('editSelected'), hint: 'E', run: () => editShift(selectedRow.id) }] : []),
+  ], [onSelect, cal, selectedRow, t])
 
   return (
     <div className={`dshell${collapsed ? ' rail-collapsed' : ''}`} data-density={density}>

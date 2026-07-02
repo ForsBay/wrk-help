@@ -6,6 +6,7 @@
 // the touch-target / safe-area rules already defined there.
 import type { CSSProperties, ReactNode } from 'react'
 import { CATEGORY_LIST, type ShiftType } from '../features/shifts/categories'
+import { useT } from '@/lib/appI18n'
 
 export function Field({ label, hint, children, style }: {
   label: string; hint?: string; children: ReactNode; style?: CSSProperties
@@ -38,6 +39,7 @@ export function TextInput({ value, onChange, type = 'text', placeholder, inputMo
 }
 
 export function CategoryPicker({ value, onChange }: { value: ShiftType; onChange: (t: ShiftType) => void }) {
+  const t = useT()
   return (
     <div className="cat-picker">
       {CATEGORY_LIST.map(c => {
@@ -51,7 +53,7 @@ export function CategoryPicker({ value, onChange }: { value: ShiftType; onChange
             style={on ? { background: c.soft, borderColor: c.line, color: '#fafafa' } : undefined}
           >
             <span className="cat-dot" style={{ background: c.color }} />
-            {c.label}
+            {t(c.i18nKey as any)}
           </button>
         )
       })}

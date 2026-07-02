@@ -17,6 +17,7 @@ import { BottomSheet } from '../../ui/BottomSheet'
 import { Field, TextInput, CategoryPicker } from '../../ui/Form'
 import { Icon } from '../../ui/Icon'
 import { useToast } from '../../ui/Toast'
+import { useT } from '@/lib/appI18n'
 
 export type SheetMode = 'detail' | 'edit' | 'new' | null
 
@@ -29,7 +30,11 @@ const diffH = (from: string, to: string) => {
   return Math.round((m / 60) * 10) / 10
 }
 
-const todayISO = () => new Date().toISOString().slice(0, 10)
+// LOCAL calendar date (not UTC) so "today" matches the user's timezone.
+const todayISO = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 interface Draft {
   date: string; from: string; to: string; hours: string; breakMin: string; rate: string
@@ -63,6 +68,7 @@ export function ShiftSheet({ mode, row, ctx, onClose, presetDate }: {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<Draft>(draftOf(row))
   const toast = useToast()
+  const t = useT()
 
   // Reset internal state whenever the sheet (re)opens for a different target.
   useEffect(() => {
@@ -85,13 +91,13 @@ export function ShiftSheet({ mode, row, ctx, onClose, presetDate }: {
       workplace: draft.workplace.trim(), notes: draft.notes.trim(),
       type: draft.type, planned: draft.planned, gcalSynced: draft.gcalSynced,
     }
-    if (mode === 'new') { ctx.actions.add({ ...patch, overtime: row?.overtime ?? 0 } as Omit<Shift, 'id' | 'weekday'>); toast.success(draft.gcalSynced ? 'Shift added & synced' : 'Shift added') }
-    else if (row)       { ctx.actions.update(row.id, patch); toast.success('Shift updated') }
+    if (mode === 'new') { ctx.actions.add({ ...patch, overtime: row?.overtime ?? 0 } as Omit<Shift, 'id' | 'weekday'>); toast.success(draft.gcalSynced ? t('shiftAddedSynced') : t('shiftAdded')) }
+    else if (row)       { ctx.actions.update(row.id, patch); toast.success(t('shiftUpdated')) }
     onClose()
   }
 
   const cat = categoryOf(editing ? draft.type : row?.type)
-  const title = mode === 'new' ? 'New shift' : editing ? 'Edit shift' : (row?.f.full ?? 'Shift')
+  const title = mode === 'new' ? t('newShift') : editing ? t('edit') : (row?.f.full ?? t('shiftTitle'))
 
   return (
     <BottomSheet open={open} onClose={onClose} title={title}>
@@ -99,67 +105,67 @@ export function ShiftSheet({ mode, row, ctx, onClose, presetDate }: {
       {!editing && row && (
         <div className="sheet-cat" style={{ background: cat.soft, borderColor: cat.line }}>
           <span className="cat-dot" style={{ background: cat.color }} />
-          <span style={{ fontWeight: 600 }}>{cat.label}</span>
-          {row.planned && <span className="pill-plan">Planned</span>}
+          <span style={{ fontWeight: 600 }}>{t(cat.i18nKey as any)}</span>
+          {row.planned && <span className="pill-plan">{t('planned')}</span>}
           <span style={{ flex: 1 }} />
           <span className={`sync-dot${row.gcalSynced ? ' on' : ''}`} />
-          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{row.gcalSynced ? 'Synced' : 'Not synced'}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{row.gcalSynced ? t('synced') : t('notSynced')}</span>
         </div>
       )}
 
       {editing ? (
         <div className="form-grid">
-          <Field label="Date"><TextInput type="date" value={draft.date} onChange={v => set({ date: v })} /></Field>
-          <Field label="Category"><CategoryPicker value={draft.type} onChange={t => set({ type: t })} /></Field>
+          <Field label={t('date')}><TextInput type="date" value={draft.date} onChange={v => set({ date: v })} /></Field>
+          <Field label={t('category')}><CategoryPicker value={draft.type} onChange={ty => set({ type: ty })} /></Field>
           <div className="form-row">
-            <Field label="From" style={{ flex: 1 }}><TextInput type="time" value={draft.from} onChange={setFrom} /></Field>
-            <Field label="To" style={{ flex: 1 }}><TextInput type="time" value={draft.to} onChange={setTo} /></Field>
+            <Field label={t('from')} style={{ flex: 1 }}><TextInput type="time" value={draft.from} onChange={setFrom} /></Field>
+            <Field label={t('to')} style={{ flex: 1 }}><TextInput type="time" value={draft.to} onChange={setTo} /></Field>
           </div>
           <div className="form-row">
-            <Field label="Duration" hint="hours" style={{ flex: 1 }}>
+            <Field label={t('duration')} hint={t('hrs')} style={{ flex: 1 }}>
               <div className="dur-input">
                 <TextInput type="text" inputMode="decimal" value={draft.hours} onChange={v => set({ hours: v.replace(/[^0-9.]/g, '') })} placeholder="8" />
                 <span className="dur-suffix">h</span>
               </div>
             </Field>
-            <Field label="Break" hint="min" style={{ flex: 1 }}><TextInput type="text" inputMode="numeric" value={draft.breakMin} onChange={v => set({ breakMin: v.replace(/[^0-9]/g, '') })} placeholder="0" /></Field>
+            <Field label={t('breakLabel')} hint={t('min')} style={{ flex: 1 }}><TextInput type="text" inputMode="numeric" value={draft.breakMin} onChange={v => set({ breakMin: v.replace(/[^0-9]/g, '') })} placeholder="0" /></Field>
           </div>
-          <Field label="Workplace"><TextInput value={draft.workplace} onChange={v => set({ workplace: v })} placeholder="e.g. Warehouse A" /></Field>
-          <Field label="Hourly rate" hint={`default ${ctx.meta.rate} ${ctx.meta.currency}`}>
+          <Field label={t('workplace')}><TextInput value={draft.workplace} onChange={v => set({ workplace: v })} placeholder={t('egWarehouse')} /></Field>
+          <Field label={t('hourlyRate')} hint={`${t('default')} ${ctx.meta.rate} ${ctx.meta.currency}`}>
             <TextInput type="text" inputMode="decimal" value={draft.rate} onChange={v => set({ rate: v.replace(/[^0-9.]/g, '') })} placeholder={String(ctx.meta.rate)} />
           </Field>
-          <Field label="Notes"><textarea className="fld-input" style={{ minHeight: 64, resize: 'vertical' }} value={draft.notes} onChange={e => set({ notes: e.target.value })} placeholder="Optional note…" /></Field>
+          <Field label={t('notesField')}><textarea className="fld-input" style={{ minHeight: 64, resize: 'vertical' }} value={draft.notes} onChange={e => set({ notes: e.target.value })} placeholder={t('optionalNote')} /></Field>
           <button className="row-toggle" type="button" onClick={() => set({ planned: !draft.planned })}>
-            <span>Planned shift</span>
+            <span>{t('plannedShift')}</span>
             <span className={`switch${draft.planned ? ' on' : ''}`} />
           </button>
           <button className="row-toggle" type="button" onClick={() => set({ gcalSynced: !draft.gcalSynced })}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}><Icon name="sync" size={16} /> Sync to Google Calendar</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 9 }}><Icon name="sync" size={16} /> {t('syncGoogleCal')}</span>
             <span className={`switch${draft.gcalSynced ? ' on' : ''}`} />
           </button>
 
           <div className="sheet-actions">
-            {mode !== 'new' && <button className="btn-ghost" style={{ flex: 1 }} onClick={() => (mode === 'detail' ? setEditing(false) : onClose())}>Cancel</button>}
-            <button className="cta-primary" style={{ flex: 2 }} onClick={save}>{mode === 'new' ? 'Add shift' : 'Save changes'}</button>
+            {mode !== 'new' && <button className="btn-ghost" style={{ flex: 1 }} onClick={() => (mode === 'detail' ? setEditing(false) : onClose())}>{t('cancel')}</button>}
+            <button className="cta-primary" style={{ flex: 2 }} onClick={save}>{mode === 'new' ? t('addShift') : t('save')}</button>
           </div>
         </div>
       ) : row ? (
         <>
           <div className="detail-grid">
-            <DetailRow icon="clock" label="Time" value={row.f.range} />
-            <DetailRow label="Duration" value={row.f.duration} />
-            <DetailRow icon="coin" label="Pay" value={row.f.earnings} accent />
-            <DetailRow label="Rate" value={`${row.rate ?? ctx.meta.rate} ${ctx.meta.currency}/h`} />
-            <DetailRow label="Overtime" value={row.f.overtime} />
-            <DetailRow label="Breaks" value={row.f.breaks} />
-            <DetailRow icon="briefcase" label="Workplace" value={row.workplace || '—'} />
+            <DetailRow icon="clock" label={t('time')} value={row.f.range} />
+            <DetailRow label={t('duration')} value={row.f.duration} />
+            <DetailRow icon="coin" label={t('pay')} value={row.f.earnings} accent />
+            <DetailRow label={t('rate')} value={`${row.rate ?? ctx.meta.rate} ${ctx.meta.currency}/h`} />
+            <DetailRow label={t('overtime')} value={row.f.overtime} />
+            <DetailRow label={t('breaks')} value={row.f.breaks} />
+            <DetailRow icon="briefcase" label={t('workplace')} value={row.workplace || '—'} />
           </div>
           {row.notes && <div className="detail-notes">{row.notes}</div>}
 
           <div className="sheet-actions">
-            <button className="btn-ghost" onClick={() => setEditing(true)}><Icon name="pencil" size={15} /> Edit</button>
-            <button className="btn-ghost" onClick={() => { ctx.actions.duplicate(row.id); toast.success('Shift duplicated', 'copy'); onClose() }}><Icon name="copy" size={15} /> Duplicate</button>
-            <button className="btn-ghost danger" onClick={() => { ctx.actions.remove(row.id); toast.toast('Shift deleted', { tone: 'danger', icon: 'trash' }); onClose() }}><Icon name="trash" size={15} /> Delete</button>
+            <button className="btn-ghost" onClick={() => setEditing(true)}><Icon name="pencil" size={15} /> {t('edit')}</button>
+            <button className="btn-ghost" onClick={() => { ctx.actions.duplicate(row.id); toast.success(t('shiftDuplicated'), 'copy'); onClose() }}><Icon name="copy" size={15} /> {t('duplicate')}</button>
+            <button className="btn-ghost danger" onClick={() => { ctx.actions.remove(row.id); toast.toast(t('shiftDeleted'), { tone: 'danger', icon: 'trash' }); onClose() }}><Icon name="trash" size={15} /> {t('delete')}</button>
           </div>
         </>
       ) : null}

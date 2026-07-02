@@ -27,6 +27,23 @@ const EN: Dict = {
   version: 'Version', performanceMode: 'Performance mode', cloudSync: 'Cloud sync',
   signedInAs: 'Signed in', notSignedIn: 'Not signed in', syncedDevices: 'Synced across your devices',
   monday: 'Monday', auto: 'Auto',
+  // shift form ("Shiftly" and "Google" are proper nouns — never translated)
+  date: 'Date', category: 'Category', from: 'From', to: 'To', duration: 'Duration',
+  breakLabel: 'Break', min: 'min', hrs: 'hours', workplace: 'Workplace', notesField: 'Notes',
+  optionalNote: 'Optional note…', egWarehouse: 'e.g. Warehouse A',
+  plannedShift: 'Planned shift', syncGoogleCal: 'Sync to Google Calendar', default: 'default',
+  // shift detail
+  time: 'Time', rate: 'Rate', breaks: 'Breaks', shiftTitle: 'Shift',
+  planned: 'Planned', synced: 'Synced', notSynced: 'Not synced',
+  // categories
+  catRegular: 'Regular', catOvertime: 'Overtime', catNight: 'Night', catTraining: 'Training', catLeave: 'Time off',
+  // toasts
+  shiftAdded: 'Shift added', shiftAddedSynced: 'Shift added & synced', shiftUpdated: 'Shift updated',
+  shiftDuplicated: 'Shift duplicated', shiftDeleted: 'Shift deleted',
+  // command palette / toolbar
+  goTo: 'Go to', goToday: 'Go to today', prevMonth: 'Previous month', nextMonth: 'Next month',
+  editSelected: 'Edit selected shift', typeCommand: 'Type a command…', noCommands: 'No commands',
+  month: 'Month', week: 'Week', agenda: 'Agenda',
 }
 const RU: Dict = {
   calendar: 'Календарь', dashboard: 'Обзор', shifts: 'Смены', statistics: 'Статистика',
@@ -43,6 +60,18 @@ const RU: Dict = {
   version: 'Версия', performanceMode: 'Режим производительности', cloudSync: 'Облачная синхронизация',
   signedInAs: 'Вы вошли', notSignedIn: 'Вы не вошли', syncedDevices: 'Синхронизация между устройствами',
   monday: 'Понедельник', auto: 'Авто',
+  date: 'Дата', category: 'Категория', from: 'Начало', to: 'Конец', duration: 'Длительность',
+  breakLabel: 'Перерыв', min: 'мин', hrs: 'часы', workplace: 'Место работы', notesField: 'Заметки',
+  optionalNote: 'Необязательная заметка…', egWarehouse: 'напр. Склад A',
+  plannedShift: 'Запланированная смена', syncGoogleCal: 'Синхронизация с Google Calendar', default: 'по умолч.',
+  time: 'Время', rate: 'Ставка', breaks: 'Перерывы', shiftTitle: 'Смена',
+  planned: 'Запланирована', synced: 'Синхронизировано', notSynced: 'Не синхронизировано',
+  catRegular: 'Обычная', catOvertime: 'Сверхурочная', catNight: 'Ночная', catTraining: 'Обучение', catLeave: 'Отгул',
+  shiftAdded: 'Смена добавлена', shiftAddedSynced: 'Смена добавлена и синхронизирована', shiftUpdated: 'Смена обновлена',
+  shiftDuplicated: 'Смена продублирована', shiftDeleted: 'Смена удалена',
+  goTo: 'Перейти к', goToday: 'Перейти к сегодня', prevMonth: 'Предыдущий месяц', nextMonth: 'Следующий месяц',
+  editSelected: 'Изменить выбранную смену', typeCommand: 'Введите команду…', noCommands: 'Нет команд',
+  month: 'Месяц', week: 'Неделя', agenda: 'Список',
 }
 const PL: Dict = {
   calendar: 'Kalendarz', dashboard: 'Pulpit', shifts: 'Zmiany', statistics: 'Statystyki',
@@ -59,6 +88,18 @@ const PL: Dict = {
   version: 'Wersja', performanceMode: 'Tryb wydajności', cloudSync: 'Synchronizacja w chmurze',
   signedInAs: 'Zalogowano', notSignedIn: 'Niezalogowany', syncedDevices: 'Synchronizacja między urządzeniami',
   monday: 'Poniedziałek', auto: 'Auto',
+  date: 'Data', category: 'Kategoria', from: 'Od', to: 'Do', duration: 'Czas trwania',
+  breakLabel: 'Przerwa', min: 'min', hrs: 'godz.', workplace: 'Miejsce pracy', notesField: 'Notatki',
+  optionalNote: 'Opcjonalna notatka…', egWarehouse: 'np. Magazyn A',
+  plannedShift: 'Zaplanowana zmiana', syncGoogleCal: 'Synchronizuj z Google Calendar', default: 'domyślnie',
+  time: 'Czas', rate: 'Stawka', breaks: 'Przerwy', shiftTitle: 'Zmiana',
+  planned: 'Zaplanowana', synced: 'Zsynchronizowano', notSynced: 'Niezsynchronizowano',
+  catRegular: 'Zwykła', catOvertime: 'Nadgodziny', catNight: 'Nocna', catTraining: 'Szkolenie', catLeave: 'Wolne',
+  shiftAdded: 'Zmiana dodana', shiftAddedSynced: 'Zmiana dodana i zsynchronizowana', shiftUpdated: 'Zmiana zaktualizowana',
+  shiftDuplicated: 'Zmiana zduplikowana', shiftDeleted: 'Zmiana usunięta',
+  goTo: 'Przejdź do', goToday: 'Przejdź do dziś', prevMonth: 'Poprzedni miesiąc', nextMonth: 'Następny miesiąc',
+  editSelected: 'Edytuj wybraną zmianę', typeCommand: 'Wpisz polecenie…', noCommands: 'Brak poleceń',
+  month: 'Miesiąc', week: 'Tydzień', agenda: 'Agenda',
 }
 const UK: Dict = {
   calendar: 'Календар', dashboard: 'Огляд', shifts: 'Зміни', statistics: 'Статистика',
@@ -75,6 +116,18 @@ const UK: Dict = {
   version: 'Версія', performanceMode: 'Режим продуктивності', cloudSync: 'Хмарна синхронізація',
   signedInAs: 'Ви увійшли', notSignedIn: 'Не авторизовано', syncedDevices: 'Синхронізація між пристроями',
   monday: 'Понеділок', auto: 'Авто',
+  date: 'Дата', category: 'Категорія', from: 'Початок', to: 'Кінець', duration: 'Тривалість',
+  breakLabel: 'Перерва', min: 'хв', hrs: 'год.', workplace: 'Місце роботи', notesField: 'Нотатки',
+  optionalNote: 'Необовʼязкова нотатка…', egWarehouse: 'напр. Склад A',
+  plannedShift: 'Запланована зміна', syncGoogleCal: 'Синхронізація з Google Calendar', default: 'за замовч.',
+  time: 'Час', rate: 'Ставка', breaks: 'Перерви', shiftTitle: 'Зміна',
+  planned: 'Запланована', synced: 'Синхронізовано', notSynced: 'Не синхронізовано',
+  catRegular: 'Звичайна', catOvertime: 'Понаднормова', catNight: 'Нічна', catTraining: 'Навчання', catLeave: 'Відгул',
+  shiftAdded: 'Зміну додано', shiftAddedSynced: 'Зміну додано та синхронізовано', shiftUpdated: 'Зміну оновлено',
+  shiftDuplicated: 'Зміну продубльовано', shiftDeleted: 'Зміну видалено',
+  goTo: 'Перейти до', goToday: 'Перейти до сьогодні', prevMonth: 'Попередній місяць', nextMonth: 'Наступний місяць',
+  editSelected: 'Редагувати вибрану зміну', typeCommand: 'Введіть команду…', noCommands: 'Немає команд',
+  month: 'Місяць', week: 'Тиждень', agenda: 'Список',
 }
 
 const DICTS: Record<Lang, Dict> = { en: EN, ru: RU, pl: PL, uk: UK }
