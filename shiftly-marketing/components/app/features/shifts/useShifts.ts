@@ -20,6 +20,11 @@ import { loadCloud, saveCloud, subscribeCloud } from '../../../../lib/cloudStore
 import { pushShift, removeShift } from '../../../../lib/gcalSync'
 import { useAuth } from '../../../../lib/auth'
 import { useAppSettings } from '../../../../lib/appSettings'
+import { contractSyncEnabled } from '../../../../lib/flags'
+import {
+  loadContractShifts, subscribeContractShifts, saveContractShiftsDiff, webClient,
+} from '../../../../lib/contractCloud'
+import { toPcShift, fromPcShift, type ContractShift } from '../../../../lib/contract'
 
 export interface Shift {
   id: string
@@ -102,13 +107,43 @@ export function useShifts(): ShiftsContext {
   // that just arrived FROM the cloud is never written straight back (no feedback loop).
   const lastSynced = useRef<string>('')
 
-  // Source of truth: switch between local storage and Firestore on auth change.
+  // NEW unified-contract sync — OFF by default (feature flag). Resolved after mount
+  // so SSR and the first client render agree. When off, everything below behaves
+  // exactly as before (legacy `shiftlyApp` cloud field / local store).
+  const [contract, setContract] = useState(false)
+  useEffect(() => { setContract(contractSyncEnabled()) }, [])
+  // The contract shifts we last saw from the cloud — the baseline for diffed writes.
+  const contractPrev = useRef<ContractShift[]>([])
+
+  // Source of truth: local (signed out) · legacy cloud · contract cloud (flag on).
   useEffect(() => {
     if (!uid) {                                   // signed out → local store
       setShifts(loadShifts(SEED))
       return subscribeShifts(setShifts)
     }
-    let cancelled = false                          // signed in → cloud store
+
+    if (contract) {                                // signed in + flag ON → contract cloud
+      let cancelled = false
+      // NOTE: migration is NOT auto-run here — it stays explicit (console bridge /
+      // future opt-in trigger) so no existing account is migrated without consent.
+      ;(async () => {
+        const cloud = await loadContractShifts(uid)
+        if (cancelled) return
+        contractPrev.current = cloud
+        const pc = cloud.map(toPcShift)
+        lastSynced.current = JSON.stringify(pc)
+        setShifts(pc)
+      })()
+      const unsub = subscribeContractShifts(uid, remote => {
+        contractPrev.current = remote
+        const pc = remote.map(toPcShift)
+        lastSynced.current = JSON.stringify(pc)
+        setShifts(pc)
+      })
+      return () => { cancelled = true; unsub() }
+    }
+
+    let cancelled = false                          // signed in → legacy cloud store
     loadCloud(uid).then(cloud => {
       if (cancelled) return
       if (cloud && cloud.length) { lastSynced.current = JSON.stringify(cloud); setShifts(cloud) }
@@ -118,7 +153,7 @@ export function useShifts(): ShiftsContext {
       lastSynced.current = JSON.stringify(remote); setShifts(remote)
     })
     return () => { cancelled = true; unsub() }
-  }, [uid])
+  }, [uid, contract])
 
   // Persist on change to whichever store is active (cloud writes are debounced).
   const saveTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -127,8 +162,19 @@ export function useShifts(): ShiftsContext {
     const json = JSON.stringify(shifts)
     if (json === lastSynced.current) return        // came from cloud — don't echo back
     clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(() => { saveCloud(uid, shifts); lastSynced.current = json }, 600)
-  }, [shifts, uid])
+    saveTimer.current = setTimeout(() => {
+      if (contract) {
+        const client = webClient(uid)
+        const prev = contractPrev.current
+        const prevById = new Map(prev.map(s => [s.id, s]))
+        const next = shifts.map(s => fromPcShift(s, client, prevById.get(s.id)))
+        saveContractShiftsDiff(uid, next, prev).then(() => { contractPrev.current = next }).catch(e => console.error('contract save error', e))
+      } else {
+        saveCloud(uid, shifts)
+      }
+      lastSynced.current = json
+    }, 600)
+  }, [shifts, uid, contract])
 
   // Derived during render (rerender-derived-state-no-effect): rows + totals + index.
   const { rows, byId, totals } = useMemo(() => {

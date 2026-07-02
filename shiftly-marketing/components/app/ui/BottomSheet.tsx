@@ -64,7 +64,9 @@ export function BottomSheet({ open, onClose, title, children }: {
             <button className="icon-btn sheet-x" aria-label="Close" onClick={onClose}><Icon name="close" size={16} /></button>
           </div>
         )}
-        <div className="sheet-body">{children}</div>
+        {/* data-lenis-prevent: stop the page's Lenis smooth-scroll from swallowing
+            the wheel so this inner panel scrolls natively when content overflows. */}
+        <div className="sheet-body" data-lenis-prevent>{children}</div>
       </div>
     </div>
   )

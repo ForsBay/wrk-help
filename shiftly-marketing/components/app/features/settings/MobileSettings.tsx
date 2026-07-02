@@ -4,7 +4,6 @@
 // real preferences, and — now wired — Currency, Language and Hourly rate that
 // actually drive the app (earnings format, UI language). Grouped rows in the
 // shared card language.
-import { useState } from 'react'
 import type { ShiftsContext } from '../shifts/useShifts'
 import { useAppSettings, CURRENCIES, LANGS, type Lang } from '@/lib/appSettings'
 import { useT } from '@/lib/appI18n'
@@ -14,18 +13,15 @@ import { Icon, type IconName } from '../../ui/Icon'
 export function MobileSettings({ ctx }: { ctx: ShiftsContext }) {
   const t = useT()
   const settings = useAppSettings()
-  const [dark, setDark] = useState(true)
-  const [notify, setNotify] = useState(true)
-  const [autoSync, setAutoSync] = useState(true)
 
   return (
     <div className="m-stack">
       <AuthCard />
 
       <Group title={t('preferences')}>
-        <ToggleRow icon="moon" label={t('darkTheme')} on={dark} onToggle={() => setDark(v => !v)} />
-        <ToggleRow icon="bell" label={t('shiftReminders')} on={notify} onToggle={() => setNotify(v => !v)} />
-        <ToggleRow icon="sync" label={t('autoSync')} on={autoSync} onToggle={() => setAutoSync(v => !v)} />
+        <ToggleRow icon="moon" label={t('darkTheme')} on={settings.theme === 'dark'} onToggle={settings.toggleTheme} />
+        <ToggleRow icon="bell" label={t('shiftReminders')} on={settings.reminders} onToggle={() => settings.setReminders(!settings.reminders)} />
+        <ToggleRow icon="sync" label={t('autoSync')} on={settings.autoSync} onToggle={() => settings.setAutoSync(!settings.autoSync)} />
         <SelectRow icon="sparkle" label={t('language')} value={settings.lang}
           options={LANGS.map(l => ({ value: l.code, label: l.label }))}
           onChange={v => settings.setLang(v as Lang)} />

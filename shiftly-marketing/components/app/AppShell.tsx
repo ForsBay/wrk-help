@@ -20,6 +20,7 @@ import { ToastProvider } from './ui/Toast'
 import { MobileSkeleton } from './ui/Skeleton'
 import { AuthProvider } from '@/lib/auth'
 import { AppSettingsProvider } from '@/lib/appSettings'
+import { DevMigrationBridge } from './DevMigrationBridge'
 
 function Skeleton() {
   return <div style={{ minHeight: '100dvh', background: 'var(--bg, #0a0a0b)' }} />
@@ -37,6 +38,7 @@ export default function AppShell() {
     <AuthProvider>
       <AppSettingsProvider>
         <ToastProvider>
+          <DevMigrationBridge />
           <AppInner />
         </ToastProvider>
       </AppSettingsProvider>

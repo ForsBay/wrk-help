@@ -35,7 +35,7 @@ export default function CommandPalette({ open, onClose, commands }: {
           else if (e.key === 'Enter')     { e.preventDefault(); run(filtered[i]) }
         }}>
         <input ref={inputRef} className="cmdk-input" placeholder="Type a command…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <div className="cmdk-list">
+        <div className="cmdk-list" data-lenis-prevent>
           {filtered.map((c, idx) => (
             <button key={c.id} className={`cmdk-item${idx === i ? ' on' : ''}`} onMouseEnter={() => setI(idx)} onClick={() => run(c)}>
               <span>{c.label}</span>{c.hint && <kbd className="cmdk-hint">{c.hint}</kbd>}
